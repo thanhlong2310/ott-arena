@@ -984,12 +984,14 @@
           <button class="nav-item" onclick="scrollToSection('sec-history')">
             📜 Lịch Sử Đấu
           </button>
-          <button class="nav-item" onclick="scrollToSection('sec-events')">
-            📅 Sự Kiện
+          <button class="nav-item" onclick="scrollToSection('sec-tournaments')">
+            🗓️ Sự Kiện
           </button>
           <button class="nav-item" onclick="scrollToSection('sec-join-room')">
             ⚔️ Tạo / Vào Phòng Đấu
-          <button id="btnLanGuide" class="nav-item" onclick="openLanModal()" style="color: #38bdf8; font-weight: 700;">📖 Hướng dẫn LAN
+          </button>
+          <button id="btnLanGuide" class="nav-item" onclick="openLanModal()" style="color: #38bdf8; font-weight: 700;">
+            📖 Hướng dẫn LAN
           </button>
         </nav>
 
@@ -1114,7 +1116,7 @@
         </section>
 
         <section class="card" id="sec-tournaments">
-          <h2 style="color: #fde047;">🏆 Các Giải Đấu Đang Mở Đăng Ký</h2>
+          <h2 style="color: #fde047;">🗓️ Sự Kiện & Giải Đấu Đang Mở Đăng Ký</h2>
           <div id="tourList" style="color: var(--muted); font-size: 14px;">
             Hiện chưa có giải đấu nào được mở. Hãy chờ Quản trị viên tạo giải.
           </div>
@@ -1401,7 +1403,10 @@
       function scrollToSection(id) {
         if ($("homeView").hidden) showHomeView();
         setTimeout(() => {
-          const el = $(id);
+          let el = $(id);
+          if (!el && (id === "sec-events" || id === "sec-tournaments")) {
+            el = $("sec-tournaments") || $("sec-events");
+          }
           if (el) el.scrollIntoView({ behavior: "smooth" });
         }, 100);
       }
