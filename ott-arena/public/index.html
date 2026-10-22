@@ -1066,10 +1066,11 @@
           <div style="color: var(--muted); margin-bottom: 14px; font-size: 14px; line-height: 1.6;">
             Nhập tên phòng và ấn <b>"Tạo Giải"</b> để khóa tính năng tự ghép cặp trong phòng đó. Khi tất cả thí sinh báo cáo đã nộp code thành công, nhấn <b>"Ghép cặp (Elo)"</b> để server tìm đối thủ dựa trên trình độ.
           </div>
-          <div class="row" style="max-width: 650px;">
+          <div class="row" style="max-width: 750px; gap: 8px;">
             <input id="adminTourRoom" class="field" placeholder="Nhập tên phòng (VD: chungket)">
             <button class="btn" style="white-space: nowrap;" onclick="apiCreateTour()">1. Tạo Giải Đấu</button>
             <button class="btn" style="background: var(--gold); color: #000; white-space: nowrap;" onclick="apiMatchElo()">2. Ghép Cặp (Elo) ⚔️</button>
+            <button class="btn" style="background: var(--red); color: #fff; white-space: nowrap;" onclick="apiDeleteTour()">3. Xóa / Hủy Giải ❌</button>
           </div>
         </section>
 
@@ -1472,10 +1473,17 @@
         }
       }
 
+      let activeTournaments = new Set();
+
       function updateRoomUI(count, roomCode) {
         const box = $("roomStatusBox");
         const txt = $("roomStatusText");
-        if (count >= 2) {
+        const isTour = activeTournaments.has((roomCode || "").toLowerCase());
+        if (isTour) {
+          box.className = "status-box ready";
+          txt.innerHTML = `🏆 Phòng Giải Đấu <b>#${roomCode}</b>: Tự động ghép cặp đang <b>TẮT</b>. Sau khi nộp code, Quản trị viên (Admin) sẽ bấm Ghép Cặp theo Elo.`;
+          enableUpload(true);
+        } else if (count >= 2) {
           box.className = "status-box ready";
           txt.textContent = `✅ Phòng #${roomCode}: Đã có đối thủ tham gia! Bạn có thể chọn file code để thi đấu.`;
           enableUpload(true);
@@ -1651,8 +1659,14 @@
         }
       }
 
-      function startCountdown() {
+      function startCountdown(data) {
         if (!$("arenaView").hidden) lockUploadDuringMatch();
+        if (data && data.red && data.blue) {
+          const txt = $("roomStatusText");
+          if (txt) {
+            txt.innerHTML = `⚔️ Trận Đấu Bắt Đầu: <b style="color:var(--red)">${data.red}</b> (RED) VS <b style="color:var(--blue)">${data.blue}</b> (BLUE)`;
+          }
+        }
         const overlay = $("cdOverlay");
         const num = $("cdNumber");
         overlay.hidden = false;
@@ -2049,9 +2063,19 @@ $("lanGuideModal").addEventListener("click", (e) => {
 
         es.addEventListener("tournamentsUpdate", (e) => {
           const tours = JSON.parse(e.data);
+          activeTournaments = new Set((tours || []).map((t) => t.toLowerCase()));
           const box = $("tourList");
           if (!box) return;
           box.innerHTML = "";
+          
+          const currentRoom = $("room").value.trim().toLowerCase();
+          if (currentRoom && !$("roomStatusBox").hidden) {
+            const isTour = activeTournaments.has(currentRoom);
+            if (isTour) {
+              $("roomStatusBox").className = "status-box ready";
+              $("roomStatusText").innerHTML = `🏆 Phòng Giải Đấu <b>#${currentRoom}</b>: Tự động ghép đang <b>TẮT</b>. Sau khi nộp code, Quản trị viên (Admin) sẽ bấm Ghép Cặp (Elo).`;
+            }
+          }
           
           if (tours.length === 0) {
             box.textContent = "Hiện chưa có giải đấu nào được mở. Hãy chờ Quản trị viên tạo giải.";
@@ -2142,7 +2166,7 @@ $("lanGuideModal").addEventListener("click", (e) => {
           const data = e.data ? JSON.parse(e.data) : {};
           const currentRoom = $("room").value.trim().toLowerCase();
           if (data.room && data.room === currentRoom) {
-            startCountdown();
+            startCountdown(data);
           }
         });
 
@@ -2258,11 +2282,10 @@ $("lanGuideModal").addEventListener("click", (e) => {
           $("status").style.color = "var(--ok)";
           if (j.waitingOpponent) {
             $("status").textContent =
-              "⏳ Code hợp lệ! Đã nhận code, đang chờ đối thủ tải code...";
+              "⏳ " + (j.message || "Code hợp lệ! Đã nhận code, đang chờ đối thủ nộp code...");
           } else {
             $("status").textContent =
-              "⚡ Đã đủ 2 bên! Đang kích hoạt đếm ngược...";
-            lockUploadDuringMatch();
+              "⚡ " + (j.message || "Code hợp lệ! Đang chuẩn bị trận đấu...");
           }
         }
       };
@@ -2301,6 +2324,20 @@ $("lanGuideModal").addEventListener("click", (e) => {
         if (!room) return alert("Vui lòng nhập tên phòng giải đấu!");
         try {
           const r = await fetch("/api/tournament/match", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room })
+          });
+          const j = await r.json();
+          alert(j.message || j.error);
+        } catch (e) { alert("Lỗi mạng!"); }
+      }
+
+      async function apiDeleteTour() {
+        const room = $("adminTourRoom").value.trim();
+        if (!room) return alert("Vui lòng nhập tên phòng giải đấu cần xóa!");
+        if (!confirm(`Bạn có chắc chắn muốn xóa giải đấu tại phòng #${room}? Phòng này sẽ quay về chế độ tự do ghép cặp.`)) return;
+        try {
+          const r = await fetch("/api/tournament/delete", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ room })
           });

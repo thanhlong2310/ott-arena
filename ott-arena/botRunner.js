@@ -102,14 +102,15 @@ if __name__ == '__main__':
       let out = "";
       proc.stdout.on("data", (d) => (out += d.toString()));
 
+      let timer = null;
       proc.on("error", (err) => {
         console.error("[BOT PYTHON ERROR]", err.message);
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         try { fs.unlinkSync(pyPath); } catch (e) {}
         resolve(null);
       });
 
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         proc.kill();
         try {
           fs.unlinkSync(pyPath);
@@ -165,14 +166,15 @@ if __name__ == '__main__':
         let out = "";
         proc.stdout.on("data", (d) => (out += d.toString()));
 
+        let timer = null;
         proc.on("error", (err) => {
           console.error("[BOT CPP RUN ERROR]", err.message);
-          clearTimeout(timer);
+          if (timer) clearTimeout(timer);
           try { fs.unlinkSync(binPath); } catch (e) {}
           resolve(null);
         });
 
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           proc.kill();
           try {
             fs.unlinkSync(binPath);

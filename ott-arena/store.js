@@ -105,10 +105,6 @@ function getLeaderboard() {
 
 function recordMatch(match) {
   const data = readData();
-  data.history.unshift(match);
-  if (data.history.length > 500) {
-    data.history = data.history.slice(0, 500);
-  }
 
   const redU = match.red.username.toLowerCase();
   const blueU = match.blue.username.toLowerCase();
@@ -150,6 +146,15 @@ function recordMatch(match) {
     pBlue.draws++;
   }
 
+  // Gán điểm Elo cập nhật vào chi tiết trận đấu
+  match.red.elo = pRed.elo;
+  match.blue.elo = pBlue.elo;
+
+  data.history.unshift(match);
+  if (data.history.length > 500) {
+    data.history = data.history.slice(0, 500);
+  }
+
   saveData(data);
 }
 
@@ -157,8 +162,14 @@ function getMatchHistory(limit = 20) {
   const data = readData();
   return (data.history || []).slice(0, limit).map((m) => {
     const { moves, initial, ...rest } = m;
+    const redU = m.red && m.red.username ? m.red.username.toLowerCase() : "";
+    const blueU = m.blue && m.blue.username ? m.blue.username.toLowerCase() : "";
+    const redElo = m.red && m.red.elo !== undefined ? m.red.elo : (data.players[redU]?.elo ?? 1000);
+    const blueElo = m.blue && m.blue.elo !== undefined ? m.blue.elo : (data.players[blueU]?.elo ?? 1000);
     return {
       ...rest,
+      red: { ...m.red, elo: redElo },
+      blue: { ...m.blue, elo: blueElo },
       hasReplay: Array.isArray(moves) && Array.isArray(initial),
     };
   });

@@ -175,6 +175,7 @@ function broadcastSSE(event, data) {
   for (const client of sseClients) {
     try {
       client.res.write(payload);
+      if (typeof client.res.flush === "function") client.res.flush();
     } catch (e) {}
   }
 }
@@ -234,6 +235,11 @@ app.post("/api/room/leave", (req, res) => {
     if (roomReadyCode.has(roomKey)) {
       roomReadyCode.get(roomKey).delete(req.session.user.username);
       if (roomReadyCode.get(roomKey).size === 0) roomReadyCode.delete(roomKey);
+    }
+    for (let i = waitingQueue.length - 1; i >= 0; i--) {
+      if (waitingQueue[i].user.username === req.session.user.username && waitingQueue[i].room === roomKey) {
+        waitingQueue.splice(i, 1);
+      }
     }
   }
   res.json({ success: true });
@@ -338,6 +344,8 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
 
   const client = { id: Date.now(), res };
   sseClients.add(client);
@@ -386,13 +394,37 @@ app.post("/api/queue", queueLimiter, async (req, res) => {
     room: roomKey,
   };
 
+  // Làm sạch entry cũ của user trong hàng đợi nếu đã từng nộp trong phòng này
+  for (let i = waitingQueue.length - 1; i >= 0; i--) {
+    if (waitingQueue[i].user.username === req.session.user.username && waitingQueue[i].room === roomKey) {
+      waitingQueue.splice(i, 1);
+    }
+  }
+
   waitingQueue.push(entry);
 
   if (roomKey) {
     if (!roomReadyCode.has(roomKey)) roomReadyCode.set(roomKey, new Set());
     roomReadyCode.get(roomKey).add(req.session.user.username);
 
+    const isTournament = tournamentRooms.has(roomKey);
     const submittedCount = roomReadyCode.get(roomKey).size;
+
+    // Nếu phòng này thuộc danh sách Giải Đấu: Không tự kích hoạt đếm ngược mà chờ Admin
+    if (isTournament) {
+      broadcastSSE("codeSubmitted", {
+        room: roomKey,
+        username: req.session.user.username,
+        readyCount: submittedCount,
+        isTournament: true,
+      });
+      return res.json({
+        success: true,
+        waitingOpponent: true,
+        isTournament: true,
+        message: `Đã nộp code thành công vào phòng Giải đấu #${roomKey}! Vui lòng chờ Quản trị viên (Admin) phát lệnh ghép cặp.`,
+      });
+    }
 
     if (submittedCount === 1) {
       broadcastSSE("codeSubmitted", {
@@ -405,15 +437,13 @@ app.post("/api/queue", queueLimiter, async (req, res) => {
         waitingOpponent: true,
         message: "Code hợp lệ! Đã nhận code của bạn, đang chờ đối thủ...",
       });
-    } else {
-      broadcastSSE("startCountdown", { room: roomKey });
     }
   }
 
   res.json({
     success: true,
     waitingOpponent: false,
-    message: "Code hợp lệ! Đang kích hoạt đếm ngược…",
+    message: "Code hợp lệ! Đang chuẩn bị trận đấu…",
   });
   checkAndMatch();
 });
@@ -446,12 +476,20 @@ app.post("/api/tournament/match", (req, res) => {
   if (!req.session.user || req.session.user.role !== 'admin') 
     return res.status(403).json({error: "Chỉ Admin mới có quyền ghép cặp."});
   
-  const roomKey = req.body.room.trim().toLowerCase();
+  const roomKey = req.body.room ? req.body.room.trim().toLowerCase() : "";
+  if (!roomKey) return res.status(400).json({error: "Vui lòng nhập tên phòng giải đấu."});
   
-  // Lọc ra các thí sinh đang nộp code chờ trong phòng này
-  let playersInRoom = waitingQueue.filter(p => p.room === roomKey);
+  // Lọc lấy bản ghi code mới nhất của từng thí sinh duy nhất trong phòng này
+  const uniqueMap = new Map();
+  for (const entry of waitingQueue) {
+    if (entry.room === roomKey) {
+      uniqueMap.set(entry.user.username.toLowerCase(), entry);
+    }
+  }
+
+  const playersInRoom = Array.from(uniqueMap.values());
   if (playersInRoom.length < 2) 
-    return res.status(400).json({error: "Cần ít nhất 2 thí sinh nộp code để bắt đầu ghép cặp."});
+    return res.status(400).json({error: "Cần ít nhất 2 thí sinh KHÁC NHAU nộp code để bắt đầu ghép cặp."});
 
   // Lấy điểm Elo từ Store và Sắp xếp giảm dần (Người điểm cao đấu với điểm cao)
   playersInRoom.forEach(p => {
@@ -461,22 +499,51 @@ app.post("/api/tournament/match", (req, res) => {
 
   let matchCount = 0;
   broadcastTournaments();
+
   // Ghép từng cặp 2 người từ trên xuống dưới
   while (playersInRoom.length >= 2) {
      const p1 = playersInRoom.shift(); // Top 1 hiện tại
      const p2 = playersInRoom.shift(); // Top 2 hiện tại
 
-     // Xóa 2 người này khỏi hàng chờ chung
-     waitingQueue.splice(waitingQueue.indexOf(p1), 1);
-     waitingQueue.splice(waitingQueue.indexOf(p2), 1);
-     if (roomKey) roomReadyCode.delete(roomKey);
+     if (p1.user.username === p2.user.username) continue;
+
+     // Xóa toàn bộ lượt nộp của 2 người này khỏi hàng chờ chung
+     for (let i = waitingQueue.length - 1; i >= 0; i--) {
+       if (waitingQueue[i].room === roomKey && 
+           (waitingQueue[i].user.username === p1.user.username || waitingQueue[i].user.username === p2.user.username)) {
+         waitingQueue.splice(i, 1);
+       }
+     }
+     if (roomKey && roomReadyCode.has(roomKey)) {
+       roomReadyCode.get(roomKey).delete(p1.user.username);
+       roomReadyCode.get(roomKey).delete(p2.user.username);
+     }
 
      // Khởi động trận đấu
      startMatchCore(p1, p2, roomKey);
      matchCount++;
   }
+
+  if (matchCount === 0) {
+    return res.status(400).json({error: "Không tìm thấy 2 thí sinh hợp lệ khác nhau để ghép cặp."});
+  }
   
   res.json({success: true, message: `🏆 Đã ghép thành công ${matchCount} cặp đấu dựa theo hệ số Elo!`});
+});
+
+// ----------------------------------------------------
+// 2.1 API ADMIN: HỦY / XÓA PHÒNG GIẢI ĐẤU
+// ----------------------------------------------------
+app.post("/api/tournament/delete", (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'admin') 
+    return res.status(403).json({error: "Chỉ Admin mới có quyền xóa giải đấu."});
+  
+  const roomKey = req.body.room ? req.body.room.trim().toLowerCase() : "";
+  if (!roomKey) return res.status(400).json({error: "Vui lòng nhập tên phòng."});
+  
+  tournamentRooms.delete(roomKey);
+  broadcastTournaments();
+  res.json({success: true, message: `✅ Đã xóa Giải đấu tại phòng #${roomKey}. Phòng này hiện có thể tự do ghép cặp.`});
 });
 
 // ----------------------------------------------------
@@ -493,6 +560,18 @@ function startMatchCore(p1, p2, roomKey) {
     room: roomKey, state: { ply: 0 }
   });
   broadcastLiveMatches();
+
+  // Phát tín hiệu đếm ngược bắt đầu trận đấu chính thức tới đúng phòng
+  if (roomKey) {
+    broadcastSSE("startCountdown", {
+      room: roomKey,
+      matchId,
+      red: redName,
+      blue: blueName,
+      redUser: p1.user.username,
+      blueUser: p2.user.username,
+    });
+  }
 
   setTimeout(async () => {
     const matchPromise = runMatch(p1, p2, (update) => {
