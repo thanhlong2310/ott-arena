@@ -1,0 +1,2215 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OTTV2 TACTICS – Giải Đấu Bot Cờ 9x9 Trực Tuyến</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --card: #111827;
+        --card-inner: #1f2937;
+        --line: #374151;
+        --ink: #f9fafb;
+        --muted: #9ca3af;
+        --red: #ef4444;
+        --blue: #3b82f6;
+        --gold: #f59e0b;
+        --ok: #10b981;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --font: "Be Vietnam Pro", sans-serif;
+        --mono: "JetBrains Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.55 var(--font);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      [hidden] {
+        display: none !important;
+      }
+
+      /* HEADER TASKBAR */
+      .header-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(17, 24, 39, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+      }
+      .top-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 14px 20px;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        cursor: pointer;
+      }
+      .brand h1 span {
+        color: #38bdf8;
+      }
+
+      .taskbar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .nav-item {
+        background: transparent;
+        border: 0;
+        padding: 8px 14px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--muted);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .nav-item:hover {
+        color: #fff;
+        background: var(--card-inner);
+      }
+
+      .user-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .mychip {
+        background: var(--card-inner);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 16px;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .app {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px 20px 48px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+      .card h2 {
+        margin: 0 0 16px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .status-box {
+        padding: 14px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .status-box.waiting {
+        background: #451a03;
+        border: 1px solid var(--gold);
+        color: #fde047;
+      }
+      .status-box.ready {
+        background: #064e3b;
+        border: 1px solid var(--ok);
+        color: #6ee7b7;
+      }
+      .status-box.playing {
+        background: #1e1b4b;
+        border: 1px solid #6366f1;
+        color: #a5b4fc;
+      }
+
+      .arena-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr 320px;
+        gap: 20px;
+        align-items: start;
+      }
+      .arena-grid.spectator-mode {
+        grid-template-columns: 1fr 360px !important;
+      }
+
+      @media (max-width: 1150px) {
+        .arena-grid,
+        .arena-grid.spectator-mode {
+          grid-template-columns: 1fr !important;
+        }
+      }
+
+      .side-panel {
+        background: var(--card-inner);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .side-panel .panel-title {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .side-panel.p1 .panel-title {
+        color: var(--red);
+      }
+      .side-panel.p2 .panel-title {
+        color: var(--blue);
+      }
+
+      .info-badge {
+        background: #0b0f19;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+
+      .upload-zone {
+        border: 2px dashed var(--line);
+        background: #0b0f19;
+        border-radius: 14px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .upload-zone:hover {
+        border-color: var(--primary);
+      }
+      .upload-zone.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .upload-zone input {
+        display: none;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .field {
+        background: #0b0f19;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px 14px;
+        width: 100%;
+        color: var(--ink);
+        outline: none;
+      }
+      .field:focus {
+        border-color: var(--primary);
+      }
+      .btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 11px 20px;
+        font-weight: 700;
+        cursor: pointer;
+        background: var(--primary);
+        color: #fff;
+        transition: 0.2s;
+      }
+      .btn:hover {
+        background: var(--primary-hover);
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: var(--line) !important;
+      }
+      .btn.ghost {
+        background: var(--card-inner);
+        border: 1px solid var(--line);
+        color: var(--ink);
+      }
+      .btn.sm {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+
+      .turn-header {
+        text-align: center;
+        margin-bottom: 12px;
+        font-size: 15px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .turn-badge {
+        padding: 4px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 800;
+        color: #fff;
+      }
+      .turn-badge.RED {
+        background: var(--red);
+      }
+      .turn-badge.BLUE {
+        background: var(--blue);
+      }
+
+      .boardwrap {
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        max-width: 520px;
+        margin: 0 auto;
+      }
+      .ranks {
+        display: grid;
+        grid-template-rows: repeat(9, 1fr);
+        color: var(--muted);
+        font: 600 12px var(--mono);
+      }
+      .files {
+        grid-column: 2;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        height: 22px;
+        color: var(--muted);
+        font: 600 12px var(--mono);
+      }
+      .ranks span,
+      .files span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #board,
+      #rpBoard {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(9, 1fr);
+        aspect-ratio: 1;
+        border: 4px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        background: #cbd5e1;
+      }
+
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #94a3b8;
+        aspect-ratio: 1;
+        position: relative;
+      }
+      .cell.l {
+        background: #e2e8f0;
+      }
+      .cell.d {
+        background: #cbd5e1;
+      }
+      .cell.from {
+        box-shadow: inset 0 0 0 3px #fde047;
+      }
+      .cell.to {
+        box-shadow: inset 0 0 0 4px var(--primary);
+      }
+
+      .cell.goal.gred {
+        background: #fca5a5 !important;
+      }
+      .cell.goal.gblue {
+        background: #93c5fd !important;
+      }
+      .cell.goal::after {
+        content: "a1";
+        position: absolute;
+        bottom: 2px;
+        left: 4px;
+        font-size: 10px;
+        color: var(--red);
+        font-weight: bold;
+      }
+      .cell.goal.gblue::after {
+        content: "i9";
+        right: 4px;
+        left: auto;
+        color: var(--blue);
+      }
+
+      .piece {
+        width: 86%;
+        height: 86%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+      }
+      .piece.RED {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+      }
+      .piece.BLUE {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+      }
+
+      .countdown-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(11, 15, 25, 0.9);
+        backdrop-filter: blur(6px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        color: #fff;
+      }
+      .countdown-num {
+        font-size: 72px;
+        font-weight: 900;
+        color: #fde047;
+        animation: pop 0.8s infinite;
+      }
+      @keyframes pop {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      }
+      .modal-card {
+        width: 90%;
+        max-width: 440px;
+        background: #111827;
+        border-radius: 20px;
+        padding: 36px 28px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .modal-card.victory {
+        border: 2px solid var(--gold);
+        box-shadow: 0 0 50px rgba(245, 158, 11, 0.4);
+        animation: victoryGlow 1.5s infinite alternate;
+      }
+      @keyframes victoryGlow {
+        from {
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+        to {
+          box-shadow: 0 0 50px rgba(245, 158, 11, 0.7);
+        }
+      }
+
+      .modal-card.defeat {
+        border: 2px solid var(--red);
+        box-shadow: 0 0 40px rgba(239, 68, 68, 0.4);
+        animation: shake 0.5s ease-in-out;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20%,
+        60% {
+          transform: translateX(-8px);
+        }
+        40%,
+        80% {
+          transform: translateX(8px);
+        }
+      }
+
+      .modal-card.draw {
+        border: 2px solid var(--muted);
+        box-shadow: 0 0 30px rgba(156, 163, 175, 0.3);
+      }
+
+      .modal-card.spectator {
+        border: 2px solid var(--primary);
+        box-shadow: 0 0 40px rgba(37, 99, 235, 0.4);
+      }
+
+      .move-log {
+        background: #0b0f19;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 14px;
+        height: 260px;
+        overflow-y: auto;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 10px;
+      }
+      .tblwrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 13px;
+        background: var(--card-inner);
+      }
+      tr.mine {
+        background: rgba(59, 130, 246, 0.1);
+      }
+      .winc {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .losec {
+        color: var(--red);
+      }
+
+      .live-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        background: var(--card-inner);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 10px;
+      }
+      .live-badge {
+        background: var(--red);
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: bold;
+      }
+
+      .screen-login {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .auth-card {
+        width: 100%;
+        max-width: 400px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 36px;
+        text-align: center;
+      }
+
+      /* ===== MÀN HÌNH ĐĂNG NHẬP (kiểu OTT Arena cũ) ===== */
+      #loginScreen .auth-card {
+        max-width: 420px;
+        border-radius: 16px;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      #loginScreen h1 {
+        margin: 0;
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #fff;
+      }
+      #loginScreen h1 span {
+        color: var(--gold);
+      }
+      #loginScreen .hint {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0;
+      }
+      #loginScreen .auth-tabs {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0;
+      }
+      #loginScreen .auth-tabs .btn {
+        width: 120px;
+        padding: 7px 12px;
+        font-size: 14px;
+        border-radius: 9px;
+      }
+      #loginScreen .auth-tabs .btn.active {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      #loginScreen .auth-tabs .btn.active:hover {
+        background: var(--primary-hover);
+      }
+      #loginScreen .field {
+        width: 100%;
+        max-width: 260px;
+        height: 44px;
+        padding: 8px 12px;
+        font-size: 14px;
+        text-align: center;
+        align-self: center;
+      }
+      #loginScreen .field:focus {
+        border-color: var(--gold);
+      }
+      #loginScreen .password-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 260px;
+        align-self: center;
+      }
+      #loginScreen .password-wrapper .field {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: none;
+        padding: 8px 42px;
+        text-align: center;
+        text-indent: 0;
+      }
+      #loginScreen .toggle-password {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        padding: 4px;
+        border: none;
+        border-radius: 6px;
+        background: transparent !important;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      #loginScreen .toggle-password:hover {
+        color: var(--gold);
+        background: rgba(255, 255, 255, 0.06) !important;
+      }
+      #loginScreen .toggle-password svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+        pointer-events: none;
+      }
+      #loginScreen #btnLogin {
+        width: 220px;
+        max-width: 100%;
+        align-self: center;
+        padding: 10px 16px;
+        font-size: 15px;
+        background: var(--primary);
+        color: #fff;
+      }
+
+      #loginScreen #btnLogin:hover {
+        background: var(--primary-hover);
+        filter: brightness(1.08);
+      }
+      #loginScreen #btnLogin:hover {
+        filter: brightness(1.08);
+      }
+      #loginScreen #btnLogin:disabled {
+        background: var(--line) !important;
+        color: var(--muted);
+      }
+      
+      /* ===== XEM LẠI TRẬN ĐẤU ===== */
+      #replayModal .modal-card {
+        max-width: 620px;
+        padding: 20px 22px;
+        max-height: 94vh;
+        overflow-y: auto;
+      }
+      #replayModal .rp-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      #replayModal .rp-head h3 {
+        margin: 0;
+        font-size: 17px;
+        color: #fff;
+      }
+      #replayModal .rp-players {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-weight: 700;
+        flex-wrap: wrap;
+      }
+      #replayModal .boardwrap {
+        max-width: 440px;
+      }
+      #rpInfo {
+        margin: 12px 0 8px;
+        font-size: 14px;
+        color: var(--muted);
+        min-height: 21px;
+      }
+      #rpInfo b {
+        color: #fff;
+      }
+      .rp-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .rp-bar input[type="range"] {
+        flex: 1 1 160px;
+        accent-color: var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- MODAL KẾT THÚC TRẬN ĐẤU -->
+    <div id="resultModal" class="modal-overlay" hidden>
+      <div id="modalCard" class="modal-card spectator">
+        <div id="modalIcon" style="font-size: 52px; margin-bottom: 8px">🏁</div>
+        <div
+          id="modalTitle"
+          style="
+            font-size: 28px;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+          "
+        >
+          KẾT THÚC!
+        </div>
+        <div
+          id="modalDesc"
+          style="
+            color: #d1d5db;
+            margin-bottom: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+          "
+        >
+          Đang tải kết quả...
+        </div>
+        <button
+          id="modalBtn"
+          class="btn"
+          onclick="confirmAndGoHome()"
+          style="
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            background: #2563eb;
+          "
+        >
+          Xác Nhận
+        </button>
+      </div>
+    </div>
+
+    <!-- CỬA SỔ XEM LẠI TRẬN ĐẤU -->
+    <div id="replayModal" class="modal-overlay" hidden>
+      <div class="modal-card spectator">
+        <div class="rp-head">
+          <h3 id="rpTitle">Xem lại trận đấu</h3>
+          <button id="rpClose" class="btn ghost sm" type="button">
+            ✕ Đóng
+          </button>
+        </div>
+        <div class="rp-players">
+          <span class="turn-badge RED" id="rpRed">RED</span> VS
+          <span class="turn-badge BLUE" id="rpBlue">BLUE</span>
+        </div>
+        <div class="boardwrap">
+          <div class="ranks" id="rpRanks"></div>
+          <div id="rpBoard"></div>
+          <div></div>
+          <div class="files" id="rpFiles"></div>
+        </div>
+        <div id="rpInfo"></div>
+        <div class="rp-bar">
+          <button
+            id="rpFirst"
+            class="btn ghost sm"
+            type="button"
+            title="Về đầu trận"
+          >
+            ⏮
+          </button>
+          <button
+            id="rpPrev"
+            class="btn ghost sm"
+            type="button"
+            title="Lùi 1 nước (←)"
+          >
+            ◀
+          </button>
+          <button id="rpPlay" class="btn sm" type="button">▶ Phát</button>
+          <button
+            id="rpNext"
+            class="btn ghost sm"
+            type="button"
+            title="Tiến 1 nước (→)"
+          >
+            ▶
+          </button>
+          <button
+            id="rpLast"
+            class="btn ghost sm"
+            type="button"
+            title="Đến cuối trận"
+          >
+            ⏭
+          </button>
+          <input id="rpRange" type="range" min="0" max="0" value="0" />
+        </div>
+      </div>
+    </div>
+
+    <div id="loginScreen" class="screen-login">
+      <div class="auth-card">
+        <h1>OTTV2<span>.</span>TACTICS</h1>
+        <p class="hint" id="authSubtitle">Đăng nhập để vào đấu trường</p>
+
+        <div class="auth-tabs">
+          <button id="tabLogin" class="btn active" type="button">
+            Đăng nhập
+          </button>
+          <button id="tabRegister" class="btn ghost" type="button">
+            Đăng ký
+          </button>
+        </div>
+
+        <input
+          id="loginName"
+          class="field"
+          type="text"
+          maxlength="20"
+          placeholder="Tên đăng nhập"
+          autocomplete="off"
+        />
+        <input
+          id="displayNameInput"
+          class="field"
+          type="text"
+          maxlength="20"
+          placeholder="Tên hiển thị trong game"
+          autocomplete="nickname"
+          hidden
+        />
+        <input
+          id="adminCodeInput"
+          class="field"
+          type="password"
+          maxlength="50"
+          placeholder="Mã cấp quyền Admin (Nếu có)"
+          hidden
+        />
+
+        <div class="password-wrapper">
+          <input
+            id="loginPassword"
+            class="field"
+            type="password"
+            placeholder="Mật khẩu"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            id="togglePassword"
+            class="toggle-password"
+            aria-label="Hiển thị mật khẩu"
+            title="Hiển thị mật khẩu"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              <path id="eyeSlash" d="M3 3l18 18" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="loginErr" class="hint" style="color: var(--red)" hidden></div>
+        <button id="btnLogin" class="btn" type="button">Đăng nhập</button>
+        <p class="hint" style="font-size: 12px">
+          Tên đăng nhập dài 3–20 ký tự. Mật khẩu tối thiểu 8 ký tự.
+        </p>
+      </div>
+    </div>
+
+    <header class="header-sticky" id="topbar" hidden>
+      <div class="top-nav">
+        <div class="brand" onclick="goHome()">
+          <h1>OTTV2 <span>TACTICS</span></h1>
+        </div>
+
+        <nav class="taskbar">
+          <button class="nav-item" onclick="scrollToSection('sec-live')">
+            🔴 Live Trận Đấu
+          </button>
+          <button class="nav-item" onclick="scrollToSection('sec-rank')">
+            🏆 Bảng Xếp Hạng
+          </button>
+          <button class="nav-item" onclick="scrollToSection('sec-history')">
+            📜 Lịch Sử Đấu
+          </button>
+          <button class="nav-item" onclick="scrollToSection('sec-events')">
+            📅 Sự Kiện
+          </button>
+          <button class="nav-item" onclick="scrollToSection('sec-join-room')">
+            ⚔️ Tạo / Vào Phòng Đấu
+          <button id="btnLanGuide" class="nav-item" onclick="openLanModal()" style="color: #38bdf8; font-weight: 700;">📖 Hướng dẫn LAN
+          </button>
+        </nav>
+
+        <div class="user-box">
+          <div class="mychip" id="myStats">Đang kết nối…</div>
+          <button id="btnLogout" class="btn ghost sm">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="app" id="mainApp" hidden>
+      <div id="homeView">
+        <div
+          class="card"
+          id="sec-hero"
+          style="
+            background: linear-gradient(135deg, #1e1b4b, #0f172a);
+            border-color: var(--line);
+          "
+        >
+          <h1 style="margin: 0 0 10px; font-size: 32px; color: #fff">
+            🏆 OTTV2 TACTICS - Đấu Trường Bot Cờ 9x9
+          </h1>
+          <p
+            style="
+              color: var(--muted);
+              font-size: 15px;
+              margin-bottom: 20px;
+              line-height: 1.6;
+            "
+          >
+            Lập trình Bot AI tự động, chọn phòng đấu và thử thách thuật toán của
+            bạn trên Bảng Xếp Hạng!
+          </p>
+          <div style="display: flex; gap: 16px">
+            <div
+              style="
+                background: rgba(255, 255, 255, 0.05);
+                padding: 10px 18px;
+                border-radius: 12px;
+                border: 1px solid var(--line);
+              "
+            >
+              <b id="statPlayers" style="color: #38bdf8; font-size: 20px">0</b>
+              <div style="font-size: 12px; color: var(--muted)">
+                Tuyển thủ Online
+              </div>
+            </div>
+            <div
+              style="
+                background: rgba(255, 255, 255, 0.05);
+                padding: 10px 18px;
+                border-radius: 12px;
+                border: 1px solid var(--line);
+              "
+            >
+              <b id="statTopElo" style="color: #38bdf8; font-size: 20px"
+                >1000</b
+              >
+              <div style="font-size: 12px; color: var(--muted)">Top Elo</div>
+            </div>
+          </div>
+        </div>
+
+        <section class="card" id="sec-live">
+          <h2>🔴 Các Trận Đấu Đang Diễn Ra (Spectator Live)</h2>
+          <div id="liveList" style="color: var(--muted); font-size: 14px">
+            Hiện chưa có trận đấu nào đang diễn ra.
+          </div>
+        </section>
+        <!-- BẢNG ĐIỀU KHIỂN GIẢI ĐẤU (Ẩn mặc định) -->
+        <section class="card" id="sec-admin-tour" hidden>
+          <h2 style="color: var(--gold);">👑 Quản Lý Giải Đấu (Bảng Admin)</h2>
+          <div style="color: var(--muted); margin-bottom: 14px; font-size: 14px; line-height: 1.6;">
+            Nhập tên phòng và ấn <b>"Tạo Giải"</b> để khóa tính năng tự ghép cặp trong phòng đó. Khi tất cả thí sinh báo cáo đã nộp code thành công, nhấn <b>"Ghép cặp (Elo)"</b> để server tìm đối thủ dựa trên trình độ.
+          </div>
+          <div class="row" style="max-width: 650px;">
+            <input id="adminTourRoom" class="field" placeholder="Nhập tên phòng (VD: chungket)">
+            <button class="btn" style="white-space: nowrap;" onclick="apiCreateTour()">1. Tạo Giải Đấu</button>
+            <button class="btn" style="background: var(--gold); color: #000; white-space: nowrap;" onclick="apiMatchElo()">2. Ghép Cặp (Elo) ⚔️</button>
+          </div>
+        </section>
+
+        <section class="card" id="sec-rank">
+          <h2>🏆 Bảng Xếp Hạng Top Cao Thủ</h2>
+          <div class="tblwrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Hạng</th>
+                  <th>Tài khoản</th>
+                  <th>Điểm Elo</th>
+                  <th>Thắng</th>
+                  <th>Thua</th>
+                </tr>
+              </thead>
+              <tbody id="rankBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" id="sec-history">
+          <h2>📜 Lịch Sử Đấu & Xem Lại Trận</h2>
+          <div id="histList">
+            <div class="tblwrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>Phe RED</th>
+                    <th>Phe BLUE</th>
+                    <th>Kết quả</th>
+                    <th>Số nước</th>
+                    <th>Xem lại</th>
+                  </tr>
+                </thead>
+                <tbody id="histBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" id="sec-tournaments">
+          <h2 style="color: #fde047;">🏆 Các Giải Đấu Đang Mở Đăng Ký</h2>
+          <div id="tourList" style="color: var(--muted); font-size: 14px;">
+            Hiện chưa có giải đấu nào được mở. Hãy chờ Quản trị viên tạo giải.
+          </div>
+        </section>
+
+        <section class="card" id="sec-join-room">
+          <h2>⚔️ Tạo Hoặc Vào Phòng Đấu</h2>
+          <div class="row" style="max-width: 560px; margin-top: 10px">
+            <input
+              id="homeRoomInput"
+              class="field"
+              placeholder="Nhập Mã phòng (Ví dụ: phong123)"
+            />
+            <button
+              class="btn"
+              onclick="enterRoomFromHome()"
+              style="white-space: nowrap"
+            >
+              Vào Phòng Đấu →
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div id="arenaView" hidden>
+        <div style="margin-bottom: 16px">
+          <button class="btn ghost sm" onclick="goHome()">
+            ← Quay lại Trang Chủ
+          </button>
+        </div>
+
+        <section class="card">
+          <h2 id="roomTitle" style="margin-bottom: 12px">Phòng Đấu OTTV2</h2>
+
+          <div id="roomStatusBox" class="status-box waiting">
+            <span id="roomStatusText">⏳ Đang chờ đối thủ vào phòng…</span>
+          </div>
+
+          <div id="arenaGrid" class="arena-grid">
+            <div id="uploadSidePanel" class="side-panel p1">
+              <div class="panel-title">📁 Nộp Code Bot</div>
+              <div class="info-badge">
+                📌 Tải lên file chứa hàm <b>getMove(state)</b> xử lý nước đi của
+                Bot.
+              </div>
+              <div
+                id="uploadZone"
+                class="upload-zone disabled"
+                onclick="document.getElementById('fileInput').click()"
+              >
+                <div style="font-size: 26px; margin-bottom: 4px">📄</div>
+                <div id="uploadText" style="font-size: 13px">
+                  Bấm chọn <b>File Code Bot</b>
+                </div>
+                <input
+                  type="file"
+                  id="fileInput"
+                  accept=".js,.py,.cpp"
+                  disabled
+                />
+                <div
+                  id="fileName"
+                  style="
+                    color: var(--primary);
+                    margin-top: 6px;
+                    font-weight: bold;
+                    font-size: 12px;
+                  "
+                >
+                  Chưa chọn file
+                </div>
+              </div>
+              <div class="row">
+                <select id="lang" class="field" disabled>
+                  <option value="javascript">JS (.js)</option>
+                  <option value="python">Python (.py)</option>
+                  <option value="cpp">C++ (.cpp)</option>
+                </select>
+                <input
+                  id="room"
+                  class="field"
+                  placeholder="Mã phòng"
+                  readonly
+                />
+              </div>
+              <button
+                id="btnFind"
+                class="btn"
+                style="width: 100%; margin-top: 12px"
+                disabled
+              >
+                Gửi Code & Thi Đấu
+              </button>
+              <div
+                id="status"
+                style="
+                  margin-top: 10px;
+                  color: var(--muted);
+                  font-size: 12px;
+                  text-align: center;
+                "
+              >
+                Vui lòng chờ đối thủ vào phòng.
+              </div>
+            </div>
+
+            <div>
+              <div class="turn-header">
+                Lượt đi:
+                <span id="turnBadge" class="turn-badge RED">Phe Đỏ</span>
+              </div>
+
+              <div class="boardwrap">
+                <div class="ranks" id="ranks"></div>
+                <div id="board">
+                  <div id="cdOverlay" class="countdown-overlay" hidden>
+                    <div
+                      style="
+                        font-size: 16px;
+                        font-weight: 700;
+                        margin-bottom: 6px;
+                      "
+                    >
+                      TRẬN ĐẤU SẮP BẮT ĐẦU
+                    </div>
+                    <div id="cdNumber" class="countdown-num">3</div>
+                  </div>
+                </div>
+                <div></div>
+                <div class="files" id="files"></div>
+              </div>
+            </div>
+
+            <div class="side-panel p2">
+              <div class="panel-title">📜 Nhật Ký Nước Đi</div>
+              <div class="info-badge">
+                🔴 Căn cứ RED: <b>a1</b> ➔ Đích: <b>i9</b><br />
+                🔵 Căn cứ BLUE: <b>i9</b> ➔ Đích: <b>a1</b>
+              </div>
+              <div id="moveLog" class="move-log">Chờ trận đấu bắt đầu…</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <!-- MODAL HƯỚNG DẪN LAN DÀNH CHO ADMIN / BAN TỔ CHỨC -->
+<div id="lanGuideModal" class="modal-overlay" hidden>
+  <div class="modal-card spectator" style="max-width: 680px; text-align: left; padding: 28px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 20px; color: #fff;">⚙️ Sổ Tay Kỹ Thuật & Vận Hành LAN (Admin)</h3>
+      <button class="btn ghost sm" onclick="closeLanModal()" type="button">✕ Đóng</button>
+    </div>
+    
+    <div style="color: var(--muted); font-size: 13.5px; line-height: 1.7; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
+      <p style="margin-top: 0; color: #fff; font-weight: 600;">Quy trình thiết lập hạ tầng mạng biệt lập, kiểm soát thí sinh và vận hành máy chủ chấm thi OTT Arena.</p>
+      
+      <!-- BƯỚC 1 -->
+      <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;">
+        <b style="color: #38bdf8;">1. Thiết lập phần cứng & Cô lập Internet</b><br>
+        • Sử dụng Router Wi-Fi riêng cho phòng thi. <b>Tuyệt đối không cắm dây mạng WAN</b> (cáp Internet) vào router để ngăn thí sinh tra cứu tài liệu/AI.<br>
+        • Cắm máy chủ Admin trực tiếp qua cổng LAN bằng dây Ethernet (hoặc bắt Wi-Fi riêng này).
+      </div>
+
+      <!-- BƯỚC 2 -->
+      <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;">
+        <b style="color: #38bdf8;">2. Lấy IP máy chủ & Chuyển tiếp cổng (Windows ➔ WSL)</b><br>
+        • <b>Lấy IP LAN Windows:</b> Mở CMD chạy <code style="color: #fde047;">ipconfig</code>, tìm dòng <i>IPv4 Address</i> (ví dụ: <code style="color: #fde047;">192.168.0.17</code>).<br>
+        • <b>Lấy IP WSL:</b> Trong terminal Ubuntu chạy <code style="color: #fde047;">hostname -I</code> (ví dụ: <code style="color: #fde047;">172.30.38.230</code>).<br>
+        • <b>Chuyển tiếp cổng & Tường lửa:</b> Mở CMD (Run as administrator) trên Windows và chạy:<br>
+        <code style="display:block; background:#0b0f19; padding:6px 8px; border-radius:6px; margin:4px 0; color:#cbd5e1; font-family:var(--mono); font-size:11.5px;">netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=&lt;IP_WSL&gt;</code>
+        <code style="display:block; background:#0b0f19; padding:6px 8px; border-radius:6px; margin:4px 0; color:#cbd5e1; font-family:var(--mono); font-size:11.5px;">netsh advfirewall firewall add rule name="OTT Arena LAN" dir=in action=allow protocol=TCP localport=3000</code>
+      </div>
+
+      <!-- BƯỚC 3 -->
+      <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;">
+        <b style="color: #38bdf8;">3. Khởi động Server & Công bố đường dẫn</b><br>
+        • Trong thư mục dự án tại WSL, gõ: <code style="color: #fde047;">npm start</code>.<br>
+        • Thông báo địa chỉ truy cập cho thí sinh lên máy chiếu hoặc bảng: <br>
+        👉 <b style="color: #10b981;">http://&lt;IP_LAN_ADMIN&gt;:3000</b> (Ví dụ: <code style="color: #38bdf8;">http://192.168.0.17:3000</code>).
+      </div>
+
+      <!-- BƯỚC 4 -->
+      <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;">
+        <b style="color: #38bdf8;">4. Lớp bảo vệ Bot & Kiểm tra an ninh Sandbox</b><br>
+        • <b>Hộp cát Bubblewrap:</b> Đảm bảo lệnh trong <code style="color: #fde047;">botRunner.js</code> giữ nguyên cờ <code style="color: #fde047;">--unshare-net</code> để tước hoàn toàn quyền truy cập mạng khi bot thực thi.<br>
+        • <b>Theo dõi thời gian thực:</b> Quan sát số lượng <i>Tuyển thủ Online</i> trên Dashboard và theo dõi tệp nhật ký an ninh tại thư mục gốc: <code style="color: #fde047;">audit.log</code>.
+      </div>
+
+      <!-- BƯỚC 5 -->
+      <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px;">
+        <b style="color: #38bdf8;">5. Khắc phục sự cố nhanh (Troubleshooting)</b><br>
+        • <i>Thí sinh không vào được web:</i> Yêu cầu thí sinh chạy lệnh <code style="color: #fde047;">ping &lt;IP_LAN_ADMIN&gt;</code> để kiểm tra thông mạng; kiểm tra lại IP của WSL có bị đổi sau khi reboot máy không.<br>
+        • <i>Lỗi 403 Session Hijack:</i> Nếu đổi mạng Wi-Fi khác, thí sinh cần xóa cookie hoặc mở tab ẩn danh để tạo phiên mới.
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 12px; color: var(--muted);">Dành riêng cho Ban tổ chức / Quản trị viên phòng thi</span>
+      <button class="btn sm" onclick="closeLanModal()" style="padding: 10px 24px;">Đã hiểu & Đóng</button>
+    </div>
+  </div>
+</div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const ICON = { R: "✊", P: "✋", S: "✌️" };
+      const GOALS = { RED: [8, 0], BLUE: [0, 8] };
+      let fileContent = "",
+        selectedFileName = "",
+        isRegisterMode = false,
+        board = null,
+        lastMove = null,
+        myUsername = "",
+        isSpectator = false,
+        isPlaying = false;
+
+      function initDefaultBoard() {
+        board = Array(9)
+          .fill(null)
+          .map(() => Array(9).fill(null));
+        const redP = ["R", "R", "R", "P", "P", "P", "P", "S", "S", "S"];
+        let idx = 0;
+        for (let r = 0; r < 2; r++)
+          for (let c = 0; c < 5; c++)
+            if (idx < 10) board[r][c] = { t: redP[idx++], o: "RED" };
+
+        const blueP = ["R", "R", "R", "P", "P", "P", "P", "S", "S", "S"];
+        idx = 0;
+        for (let r = 7; r < 9; r++)
+          for (let c = 4; c < 9; c++)
+            if (idx < 10) board[r][c] = { t: blueP[idx++], o: "BLUE" };
+      }
+
+      function resetGameState() {
+        isPlaying = false;
+        lastMove = null;
+        fileContent = "";
+        selectedFileName = "";
+
+        if ($("fileName")) $("fileName").textContent = "Chưa chọn file";
+        if ($("moveLog")) $("moveLog").innerHTML = "Chờ trận đấu bắt đầu…";
+
+        const turnBadge = $("turnBadge");
+        if (turnBadge) {
+          turnBadge.textContent = "Phe Đỏ";
+          turnBadge.className = "turn-badge RED";
+        }
+
+        initDefaultBoard();
+        renderBoard();
+      }
+
+      function scrollToSection(id) {
+        if ($("homeView").hidden) showHomeView();
+        setTimeout(() => {
+          const el = $(id);
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+
+      async function leaveCurrentRoom() {
+        const roomCode = $("room").value.trim();
+        if (roomCode && !isSpectator) {
+          await fetch("/api/room/leave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room: roomCode }),
+          });
+        }
+      }
+
+      async function goHome() {
+        await leaveCurrentRoom();
+        window.location.hash = "";
+        isSpectator = false;
+        resetGameState();
+        showHomeView();
+      }
+
+      async function confirmAndGoHome() {
+        $("resultModal").hidden = true;
+        await goHome();
+      }
+
+      function showHomeView() {
+        $("homeView").hidden = false;
+        $("arenaView").hidden = true;
+      }
+      function showArenaView() {
+        $("homeView").hidden = true;
+        $("arenaView").hidden = false;
+      }
+
+      function enterRoomFromHome() {
+        const roomCode = $("homeRoomInput").value.trim();
+        if (!roomCode) return alert("Vui lòng nhập mã phòng!");
+        window.location.hash = roomCode;
+        openRoom(roomCode);
+      }
+
+      function openRoom(roomCode) {
+        isSpectator = false;
+        resetGameState();
+
+        $("room").value = roomCode;
+        $("roomTitle").textContent = `Phòng Đấu: #${roomCode}`;
+
+        $("uploadSidePanel").hidden = false;
+        $("roomStatusBox").hidden = false;
+        $("arenaGrid").className = "arena-grid";
+
+        showArenaView();
+        checkRoomStatus(roomCode);
+      }
+
+      async function checkRoomStatus(roomCode) {
+        const r = await fetch("/api/room/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ room: roomCode }),
+        });
+        const data = await r.json();
+        if (!isPlaying) {
+          updateRoomUI(data.playerCount, roomCode);
+        }
+      }
+
+      function updateRoomUI(count, roomCode) {
+        const box = $("roomStatusBox");
+        const txt = $("roomStatusText");
+        if (count >= 2) {
+          box.className = "status-box ready";
+          txt.textContent = `✅ Phòng #${roomCode}: Đã có đối thủ tham gia! Bạn có thể chọn file code để thi đấu.`;
+          enableUpload(true);
+        } else {
+          box.className = "status-box waiting";
+          txt.textContent = `⏳ Phòng #${roomCode}: Đang chờ đối thủ gia nhập phòng…`;
+          enableUpload(false);
+        }
+      }
+
+      function enableUpload(enable) {
+        if (isPlaying) return;
+        $("uploadZone").className = enable
+          ? "upload-zone"
+          : "upload-zone disabled";
+        $("fileInput").disabled = !enable;
+        $("lang").disabled = !enable;
+        $("btnFind").disabled = !enable;
+        if (!enable)
+          $("status").textContent =
+            "Chưa có đối thủ. Màn hình nộp file tạm khóa.";
+        else
+          $("status").textContent = "Đã sẵn sàng. Hãy chọn File Code để gửi!";
+      }
+
+      function lockUploadDuringMatch() {
+        isPlaying = true;
+        $("uploadZone").className = "upload-zone disabled";
+        $("fileInput").disabled = true;
+        $("lang").disabled = true;
+        $("btnFind").disabled = true;
+
+        const statusEl = $("status");
+        statusEl.textContent =
+          "⚔️ Trận đấu đang diễn ra! Không thể gửi lại code.";
+        statusEl.style.color = "#a5b4fc";
+
+        const box = $("roomStatusBox");
+        const txt = $("roomStatusText");
+        if (box && txt) {
+          box.className = "status-box playing";
+          txt.textContent = "⚔️ Trận đấu trực tuyến đang diễn ra căng thẳng...";
+        }
+      }
+
+      function renderBoard() {
+        const el = $("board");
+        const overlay = $("cdOverlay");
+        el.textContent = "";
+        if (overlay) el.appendChild(overlay);
+
+        for (let r = 0; r < 9; r++)
+          for (let c = 0; c < 9; c++) {
+            const cellEl = document.createElement("div");
+            cellEl.className = "cell " + ((r + c) % 2 ? "d" : "l");
+
+            if (r === GOALS.RED[0] && c === GOALS.RED[1])
+              cellEl.classList.add("goal", "gred");
+            if (r === GOALS.BLUE[0] && c === GOALS.BLUE[1])
+              cellEl.classList.add("goal", "gblue");
+            if (lastMove) {
+              if (lastMove.from[0] === r && lastMove.from[1] === c)
+                cellEl.classList.add("from");
+              if (lastMove.to[0] === r && lastMove.to[1] === c)
+                cellEl.classList.add("to");
+            }
+            const p = board && board[r][c];
+            if (p) {
+              const e = document.createElement("div");
+              e.className = "piece " + p.o;
+              e.textContent = ICON[p.t];
+              cellEl.appendChild(e);
+            }
+            el.appendChild(cellEl);
+          }
+      }
+
+      // HÀM XỬ LÝ POP-UP KẾT THÚC CÓ TÍNH ĐẾN TRƯỜNG HỢP HÒA (DRAW)
+      function handleMatchEnd(
+        winner,
+        reason,
+        redUser,
+        blueUser,
+        redName,
+        blueName,
+      ) {
+        if ($("arenaView").hidden) return;
+
+        const modal = $("resultModal");
+        const card = $("modalCard");
+        const btn = $("modalBtn");
+        modal.hidden = false;
+
+        const isPlayer = myUsername === redUser || myUsername === blueUser;
+        const isDraw = winner === "DRAW";
+
+        // 1. TRƯỜNG HỢP TRẬN ĐẤU HÒA
+        if (isDraw) {
+          if (isPlayer) {
+            // Người chơi tham gia
+            card.className = "modal-card draw";
+            $("modalIcon").textContent = "🤝";
+            $("modalTitle").textContent = "HÒA CỜ!";
+            $("modalTitle").style.color = "var(--muted)";
+            btn.style.background = "var(--line)";
+            $("modalDesc").innerHTML = `
+        Trận đấu kết thúc với tỷ số hòa!<br>
+        <span style="color:var(--muted);font-size:13px">${reason}</span>
+      `;
+          } else {
+            // Người xem (Spectator)
+            card.className = "modal-card spectator";
+            $("modalIcon").textContent = "🏁";
+            $("modalTitle").textContent = "KẾT THÚC!";
+            $("modalTitle").style.color = "#fff";
+            btn.style.background = "#2563eb";
+            $("modalDesc").innerHTML = `
+        Trận đấu giữa <b>${redName}</b> và <b>${blueName}</b> có kết quả <b>HÒA</b>!<br>
+        <span style="color:var(--muted);font-size:13px">${reason}</span>
+      `;
+          }
+          return;
+        }
+
+        // 2. TRƯỜNG HỢP CÓ NGƯỜI THẮNG / THUA
+        const winnerName = winner === "RED" ? redName : blueName;
+        const isWinner =
+          (winner === "RED" && myUsername === redUser) ||
+          (winner === "BLUE" && myUsername === blueUser);
+
+        if (isPlayer && isWinner) {
+          // Người chơi thắng
+          card.className = "modal-card victory";
+          $("modalIcon").textContent = "🏆";
+          $("modalTitle").textContent = "VICTORY!";
+          $("modalTitle").style.color = "var(--gold)";
+          btn.style.background = "var(--gold)";
+          $("modalDesc").innerHTML = `
+      Chúc mừng tuyển thủ <b>${winnerName}</b>!<br>
+      Bạn đã xuất sắc giành chiến thắng!<br>
+      <span style="color:var(--muted);font-size:13px">${reason}</span>
+    `;
+        } else if (isPlayer && !isWinner) {
+          // Người chơi thua
+          card.className = "modal-card defeat";
+          $("modalIcon").textContent = "💀";
+          $("modalTitle").textContent = "DEFEAT!";
+          $("modalTitle").style.color = "var(--red)";
+          btn.style.background = "var(--red)";
+          $("modalDesc").innerHTML = `
+      Rất tiếc, bạn đã thất bại ở trận đấu này!<br>
+      Hãy tinh chỉnh lại thuật toán Bot và thử lại sau.<br>
+      <span style="color:var(--muted);font-size:13px">${reason}</span>
+    `;
+        } else {
+          // Người xem (Spectator) khi có người thắng
+          card.className = "modal-card spectator";
+          $("modalIcon").textContent = "🏁";
+          $("modalTitle").textContent = "KẾT THÚC!";
+          $("modalTitle").style.color = "#fff";
+          btn.style.background = "#2563eb";
+          $("modalDesc").innerHTML = `
+      Tuyển thủ <b>${winnerName}</b> (${winner}) đã giành chiến thắng!<br>
+      <span style="color:var(--muted);font-size:13px">${reason}</span>
+    `;
+        }
+      }
+
+      function startCountdown() {
+        if (!$("arenaView").hidden) lockUploadDuringMatch();
+        const overlay = $("cdOverlay");
+        const num = $("cdNumber");
+        overlay.hidden = false;
+        let count = 3;
+        num.textContent = count;
+        const timer = setInterval(() => {
+          count--;
+          if (count > 0) num.textContent = count;
+          else if (count === 0) num.textContent = "ĐẤU!";
+          else {
+            clearInterval(timer);
+            overlay.hidden = true;
+          }
+        }, 900);
+      }
+
+      $("fileInput").onchange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        selectedFileName = f.name;
+        $("fileName").textContent = "Đã chọn: " + f.name;
+        const reader = new FileReader();
+        reader.onload = (evt) => (fileContent = evt.target.result);
+        reader.readAsText(f);
+      };
+
+      function setAuthMode(register) {
+        isRegisterMode = register;
+        $("displayNameInput").hidden = !register;
+        $("adminCodeInput").hidden = !register;
+        $("loginPassword").autocomplete = register
+          ? "new-password"
+          : "current-password";
+        $("btnLogin").textContent = register ? "Tạo tài khoản" : "Đăng nhập";
+        $("authSubtitle").textContent = register
+          ? "Tạo tài khoản mới"
+          : "Đăng nhập để vào đấu trường";
+        $("tabLogin").className = register ? "btn ghost" : "btn active";
+        $("tabRegister").className = register ? "btn active" : "btn ghost";
+        $("loginErr").hidden = true;
+      }
+      $("tabLogin").onclick = () => setAuthMode(false);
+      $("tabRegister").onclick = () => setAuthMode(true);
+
+      async function submitAuth() {
+        const username = $("loginName").value.trim();
+        const password = $("loginPassword").value;
+        const displayName = $("displayNameInput").value.trim() || username;
+        const adminCode = isRegisterMode ? $("adminCodeInput").value.trim() : "";
+        const err = $("loginErr");
+        const fail = (msg) => {
+          err.textContent = msg;
+          err.hidden = false;
+        };
+
+        if (!/^[A-Za-z0-9_.-]{3,20}$/.test(username))
+          return fail(
+            "Tên đăng nhập phải dài 3–20 ký tự, gồm chữ không dấu, số, dấu chấm, _ hoặc -.",
+          );
+        if (password.length < 8 || password.length > 128)
+          return fail("Mật khẩu phải có từ 8 đến 128 ký tự.");
+        err.hidden = true;
+        $("btnLogin").disabled = true;
+        try {
+          const r = await fetch(
+            isRegisterMode ? "/api/register" : "/api/login",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password, displayName, adminCode }),
+            },
+          );
+          const j = await r.json();
+          if (!r.ok)
+            throw new Error(j.error || "Không thể xác thực tài khoản.");
+          myUsername = username;
+          location.reload();
+        } catch (e) {
+          fail(e.message || "Không thể kết nối máy chủ.");
+        } finally {
+          $("btnLogin").disabled = false;
+        }
+      }
+
+      // Nút con mắt hiện / ẩn mật khẩu
+      $("togglePassword").addEventListener("click", (e) => {
+        e.preventDefault();
+        const show = $("loginPassword").type === "password";
+        $("loginPassword").type = show ? "text" : "password";
+        $("eyeSlash").style.display = show ? "none" : "block";
+        $("togglePassword").title = show ? "Ẩn mật khẩu" : "Hiển thị mật khẩu";
+        $("togglePassword").setAttribute(
+          "aria-label",
+          $("togglePassword").title,
+        );
+        $("loginPassword").focus();
+      });
+
+      $("btnLogin").onclick = submitAuth;
+
+      ["loginName", "loginPassword", "displayNameInput"].forEach((id) => {
+        $(id).addEventListener("keyup", (e) => {
+          if (e.key === "Enter") submitAuth();
+        });
+      });
+
+      $("homeRoomInput").addEventListener("keyup", (e) => {
+        if (e.key === "Enter") enterRoomFromHome();
+      });
+
+      $("btnLogout").onclick = async () => {
+        await fetch("/api/logout");
+        location.reload();
+      };
+
+      async function loadMe() {
+        const j = await (await fetch("/api/me")).json();
+        if (j.authenticated) {
+          myUsername = j.username;
+          myRole = j.role || (j.username === 'admin' ? 'admin' : 'player');
+
+          $("loginScreen").hidden = true;
+          $("topbar").hidden = false;
+          $("mainApp").hidden = false;
+          $("myStats").innerHTML =
+            `<b>${j.name}</b> · Elo ${j.stats ? j.stats.elo : 1000}`;
+          if (j.onlinePlayers !== undefined)
+            $("statPlayers").textContent = j.onlinePlayers;
+
+          const roomFromUrl = window.location.hash.replace("#", "").trim();
+          if (roomFromUrl) {
+            openRoom(roomFromUrl);
+          }
+        }
+        if (myRole === 'admin') {
+            const adminTour = $("sec-admin-tour");
+            if(adminTour) adminTour.hidden = false;
+          }
+      }
+
+      async function loadRank() {
+        const { players, onlinePlayers } = await (
+          await fetch("/api/leaderboard")
+        ).json();
+        const body = $("rankBody");
+        body.textContent = "";
+        if (onlinePlayers !== undefined)
+          $("statPlayers").textContent = onlinePlayers;
+        if (players.length) $("statTopElo").textContent = players[0].elo;
+
+        players.forEach((p) => {
+          const tr = document.createElement("tr");
+          if (p.mine) tr.className = "mine";
+          tr.innerHTML = `<td>#${p.rank}</td><td><b>${p.name}</b></td><td><b>${p.elo}</b></td><td class="winc">${p.wins}</td><td class="losec">${p.losses}</td>`;
+          body.appendChild(tr);
+        });
+      }
+
+      // ====== HÀM ĐIỀU KHIỂN MODAL HƯỚNG DẪN LAN ======
+function openLanModal() {
+  // THÊM CHỐT CHẶN AN NINH KÉP: Kiểm tra lại quyền một lần nữa khi click
+  if (myRole !== 'admin') {
+    alert("Chỉ Ban tổ chức / Quản trị viên mới được xem tài liệu này.");
+    return; // Dừng lại ngay lập tức, không mở Modal
+  }
+  
+  $("lanGuideModal").hidden = false;
+}
+
+function closeLanModal() {
+  $("lanGuideModal").hidden = true;
+}
+
+// Đóng modal khi bấm ra vùng nền tối bên ngoài
+$("lanGuideModal").addEventListener("click", (e) => {
+  if (e.target === $("lanGuideModal")) closeLanModal();
+});
+
+      async function loadHist() {
+        const { matches } = await (await fetch("/api/history?limit=20")).json();
+        const body = $("histBody");
+        body.textContent = "";
+        if (!matches.length) {
+          body.innerHTML =
+            '<tr><td colspan="6">Chưa có lịch sử trận đấu.</td></tr>';
+          return;
+        }
+        matches.forEach((m) => {
+          const tr = document.createElement("tr");
+          const elo = (x) => (x === undefined ? "–" : x);
+          const action =
+            m.hasReplay === false
+              ? '<span style="color:var(--muted);font-size:12px">Không có dữ liệu</span>'
+              : `<button class="btn ghost sm" onclick="openReplay('${m.id}')">Xem lại</button>`;
+          tr.innerHTML = `
+      <td>${new Date(m.finishedAt).toLocaleString("vi-VN")}</td>
+      <td><b>${m.red.name}</b> (${elo(m.red.elo)})</td>
+      <td><b>${m.blue.name}</b> (${elo(m.blue.elo)})</td>
+      <td><b class="${m.winner === "RED" ? "winc" : m.winner === "BLUE" ? "losec" : ""}">${m.winner === "DRAW" ? "HÒA CỜ" : m.winner + " THẮNG"}</b> (${m.reason})</td>
+      <td>${m.plies}</td>
+      <td>${action}</td>
+    `;
+          body.appendChild(tr);
+        });
+      }
+
+      // ====== XEM LẠI TRẬN ĐẤU ======
+      let rp = null,
+        rpTimer = null;
+
+      (function buildReplayAxes() {
+        for (let r = 0; r < 9; r++)
+          $("rpRanks").appendChild(document.createElement("span")).textContent =
+            9 - r;
+        for (let c = 0; c < 9; c++)
+          $("rpFiles").appendChild(document.createElement("span")).textContent =
+            "abcdefghi"[c];
+      })();
+
+      function buildFrames(rec) {
+        const b = JSON.parse(JSON.stringify(rec.initial));
+        const frames = [JSON.parse(JSON.stringify(b))];
+        rec.moves.forEach(([fr, fc, tr, tc]) => {
+          b[tr][tc] = b[fr][fc];
+          b[fr][fc] = null;
+          frames.push(JSON.parse(JSON.stringify(b)));
+        });
+        return frames;
+      }
+
+      function renderReplayBoard(b, lm) {
+        const el = $("rpBoard");
+        el.textContent = "";
+        for (let r = 0; r < 9; r++)
+          for (let c = 0; c < 9; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell " + ((r + c) % 2 ? "d" : "l");
+            if (r === GOALS.RED[0] && c === GOALS.RED[1])
+              cell.classList.add("goal", "gred");
+            if (r === GOALS.BLUE[0] && c === GOALS.BLUE[1])
+              cell.classList.add("goal", "gblue");
+            if (lm) {
+              if (lm.from[0] === r && lm.from[1] === c)
+                cell.classList.add("from");
+              if (lm.to[0] === r && lm.to[1] === c) cell.classList.add("to");
+            }
+            const p = b[r][c];
+            if (p) {
+              const e = document.createElement("div");
+              e.className = "piece " + p.o;
+              e.textContent = ICON[p.t];
+              cell.appendChild(e);
+            }
+            el.appendChild(cell);
+          }
+      }
+
+      function showFrame(i) {
+        rp.i = Math.max(0, Math.min(rp.frames.length - 1, i));
+        const mv = rp.i > 0 ? rp.rec.moves[rp.i - 1] : null;
+        const lm = mv ? { from: [mv[0], mv[1]], to: [mv[2], mv[3]] } : null;
+        renderReplayBoard(rp.frames[rp.i], lm);
+        $("rpRange").max = rp.frames.length - 1;
+        $("rpRange").value = rp.i;
+
+        const total = rp.frames.length - 1;
+        let text = `Nước <b>${rp.i}</b>/${total}`;
+        if (mv) {
+          const side = rp.i % 2 === 1 ? "RED" : "BLUE";
+          const pos = (r, c) => "abcdefghi"[c] + (9 - r);
+          text += ` · ${side === "RED" ? "🔴" : "🔵"} ${pos(mv[0], mv[1])} ➜ ${pos(mv[2], mv[3])}`;
+        }
+        if (rp.i === total) {
+          text += ` · <b>${rp.rec.winner === "DRAW" ? "HÒA CỜ" : rp.rec.winner + " THẮNG"}</b>: ${rp.rec.reason}`;
+        }
+        $("rpInfo").innerHTML = text;
+      }
+
+      function stopPlay() {
+        if (rpTimer) {
+          clearInterval(rpTimer);
+          rpTimer = null;
+        }
+        $("rpPlay").textContent = "▶ Phát";
+      }
+
+      function togglePlay() {
+        if (!rp) return;
+        if (rpTimer) {
+          stopPlay();
+          return;
+        }
+        if (rp.i >= rp.frames.length - 1) showFrame(0);
+        $("rpPlay").textContent = "⏸ Dừng";
+        rpTimer = setInterval(() => {
+          if (rp.i >= rp.frames.length - 1) stopPlay();
+          else showFrame(rp.i + 1);
+        }, 600);
+      }
+
+      async function openReplay(id) {
+        try {
+          const r = await fetch("/api/history/" + encodeURIComponent(id));
+          const rec = await r.json();
+          if (!r.ok)
+            return alert(rec.error || "Không tải được dữ liệu trận đấu");
+          stopPlay();
+          rp = { rec, frames: buildFrames(rec), i: 0 };
+          $("rpTitle").textContent = "Xem lại trận đấu";
+          $("rpRed").textContent = rec.red.name;
+          $("rpBlue").textContent = rec.blue.name;
+          $("replayModal").hidden = false;
+          showFrame(0);
+        } catch (e) {
+          alert("Không kết nối được máy chủ để tải trận đấu.");
+        }
+      }
+
+      function closeReplay() {
+        stopPlay();
+        rp = null;
+        $("replayModal").hidden = true;
+      }
+
+      $("rpFirst").onclick = () => {
+        stopPlay();
+        showFrame(0);
+      };
+      $("rpPrev").onclick = () => {
+        stopPlay();
+        showFrame(rp.i - 1);
+      };
+      $("rpNext").onclick = () => {
+        stopPlay();
+        showFrame(rp.i + 1);
+      };
+      $("rpLast").onclick = () => {
+        stopPlay();
+        showFrame(rp.frames.length - 1);
+      };
+      $("rpPlay").onclick = togglePlay;
+      $("rpRange").oninput = (e) => {
+        stopPlay();
+        showFrame(+e.target.value);
+      };
+      $("rpClose").onclick = closeReplay;
+      $("replayModal").addEventListener("click", (e) => {
+        if (e.target === $("replayModal")) closeReplay();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (!rp || $("replayModal").hidden) return;
+        if (e.key === "Escape") closeReplay();
+        else if (e.key === "ArrowLeft") {
+          stopPlay();
+          showFrame(rp.i - 1);
+        } else if (e.key === "ArrowRight") {
+          stopPlay();
+          showFrame(rp.i + 1);
+        } else if (e.key === " ") {
+          e.preventDefault();
+          togglePlay();
+        }
+      });
+
+      function initApp() {
+        loadMe();
+        loadRank();
+        loadHist();
+        const es = new EventSource("/api/stream");
+
+        es.addEventListener("tournamentsUpdate", (e) => {
+          const tours = JSON.parse(e.data);
+          const box = $("tourList");
+          if (!box) return;
+          box.innerHTML = "";
+          
+          if (tours.length === 0) {
+            box.textContent = "Hiện chưa có giải đấu nào được mở. Hãy chờ Quản trị viên tạo giải.";
+            return;
+          }
+          
+          tours.forEach(t => {
+            const div = document.createElement("div");
+            div.className = "live-item";
+            div.innerHTML = `
+              <div>
+                <span class="live-badge" style="background: var(--gold); color: #000;">GIẢI ĐẤU</span> 
+                <b style="font-size: 16px; color: #fff;">Phòng: #${t}</b>
+                <span style="color: var(--muted); font-size: 12px; margin-left: 8px;">(Đang chờ nộp Code)</span>
+              </div>
+              <button class="btn sm" onclick="window.location.hash='${t}'; openRoom('${t}')">Tham gia ngay →</button>
+            `;
+            box.appendChild(div);
+          });
+        });
+
+        es.addEventListener("onlineCount", (e) => {
+          const data = JSON.parse(e.data);
+          if (data.onlinePlayers !== undefined) {
+            $("statPlayers").textContent = data.onlinePlayers;
+          }
+        });
+
+        es.addEventListener("roomUpdate", (e) => {
+          const data = JSON.parse(e.data);
+          const currentRoom = $("room").value.trim().toLowerCase();
+          if (currentRoom && data.room === currentRoom && !isPlaying) {
+            updateRoomUI(data.playerCount, currentRoom);
+          }
+        });
+
+        es.addEventListener("liveMatches", (e) => {
+          const list = JSON.parse(e.data);
+          const box = $("liveList");
+          
+          if (!box) return;
+          box.innerHTML = "";
+          
+          if (!list.length) {
+            box.textContent = "Hiện chưa có trận đấu nào đang diễn ra.";
+            return;
+          }
+
+          // 1. Phân nhóm các trận đấu dựa theo mã phòng (Giải đấu)
+          const groups = {};
+          list.forEach((m) => {
+            const rKey = m.room ? m.room.toUpperCase() : "TỰ DO";
+            if (!groups[rKey]) groups[rKey] = [];
+            groups[rKey].push(m);
+          });
+
+          // 2. Vẽ danh sách các cặp đấu theo từng nhóm giải
+          for (const [roomName, matches] of Object.entries(groups)) {
+            // Tạo tiêu đề phân khu cho giải đấu
+            const header = document.createElement("div");
+            header.style.cssText = "margin: 20px 0 10px; font-size: 15px; font-weight: 800; color: #fde047; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--line); padding-bottom: 6px;";
+            
+            if (roomName === "TỰ DO") {
+              header.innerHTML = `⚔️ CÁC TRẬN ĐẤU TỰ DO <span style="font-size: 12px; color: var(--muted); font-weight: 600;">(${matches.length} trận)</span>`;
+            } else {
+              header.innerHTML = `🏆 GIẢI ĐẤU: #${roomName} <span style="font-size: 12px; color: var(--muted); font-weight: 600;">(${matches.length} cặp đấu)</span>`;
+            }
+            box.appendChild(header);
+
+            // In danh sách các cặp tuyển thủ đang đấu trong giải đó
+            matches.forEach((m) => {
+              const div = document.createElement("div");
+              div.className = "live-item";
+              div.innerHTML = `<div><span class="live-badge">LIVE</span> <b>${m.red}</b> vs <b>${m.blue}</b> (Nước ${m.state ? m.state.ply || 0 : 0})</div>`;
+              
+              const btn = document.createElement("button");
+              btn.className = "btn ghost sm";
+              btn.textContent = "Xem Trực Tiếp";
+              btn.onclick = () => watchLiveMatch(m);
+              
+              div.appendChild(btn);
+              box.appendChild(div);
+            });
+          }
+        });
+
+        es.addEventListener("startCountdown", (e) => {
+          const data = e.data ? JSON.parse(e.data) : {};
+          const currentRoom = $("room").value.trim().toLowerCase();
+          if (data.room && data.room === currentRoom) {
+            startCountdown();
+          }
+        });
+
+        es.addEventListener("matchUpdate", (e) => {
+          const data = JSON.parse(e.data);
+          const currentRoom = $("room").value.trim().toLowerCase();
+
+          if (data.room && data.room !== currentRoom) return;
+
+          if (data.update && data.update.state) {
+            if (!$("arenaView").hidden && !isSpectator) lockUploadDuringMatch();
+
+            board = data.update.state.board;
+            lastMove = data.update.move;
+
+            const currentTurn = data.update.state.turn;
+            const turnBadge = $("turnBadge");
+            if (turnBadge) {
+              turnBadge.textContent =
+                currentTurn === "RED" ? "Phe Đỏ" : "Phe Xanh";
+              turnBadge.className = "turn-badge " + currentTurn;
+            }
+
+            if (lastMove) {
+              const log = $("moveLog");
+              if (log) {
+                if (log.innerHTML === "Chờ trận đấu bắt đầu…")
+                  log.innerHTML = "";
+                const posFrom =
+                  "abcdefghi"[lastMove.from[1]] + (9 - lastMove.from[0]);
+                const posTo =
+                  "abcdefghi"[lastMove.to[1]] + (9 - lastMove.to[0]);
+                log.innerHTML += `<div>[${data.update.state.ply}] ${currentTurn}: ${posFrom} ➜ ${posTo}</div>`;
+                log.scrollTop = log.scrollHeight;
+              }
+            }
+
+            renderBoard();
+
+            if (data.update.state.winner) {
+              handleMatchEnd(
+                data.update.state.winner,
+                data.update.state.finishReason,
+                data.redUser,
+                data.blueUser,
+                data.redName,
+                data.blueName,
+              );
+            }
+          }
+        });
+
+        es.addEventListener("refresh", () => {
+          loadRank();
+          loadHist();
+        });
+      }
+
+      function watchLiveMatch(m) {
+        isSpectator = true;
+        isPlaying = true;
+
+        resetGameState();
+
+        const matchRoom = (m.room || "").toLowerCase();
+        $("room").value = matchRoom;
+        $("roomTitle").textContent =
+          `🔴 Đang xem Live: ${m.red} VS ${m.blue} (#${matchRoom})`;
+
+        $("uploadSidePanel").hidden = true;
+        $("roomStatusBox").hidden = true;
+        $("arenaGrid").className = "arena-grid spectator-mode";
+
+        showArenaView();
+
+        if (m.state && m.state.board) {
+          board = m.state.board;
+          const turnBadge = $("turnBadge");
+          if (turnBadge && m.state.turn) {
+            turnBadge.textContent =
+              m.state.turn === "RED" ? "Phe Đỏ" : "Phe Xanh";
+            turnBadge.className = "turn-badge " + m.state.turn;
+          }
+          renderBoard();
+        }
+      }
+
+      $("btnFind").onclick = async () => {
+        if (isPlaying)
+          return alert("Trận đấu đang diễn ra, bạn không thể gửi lại code!");
+        if (!fileContent.trim()) return alert("Vui lòng chọn File Code!");
+
+        $("status").textContent =
+          "🔍 Đang kiểm tra tính hợp lệ & cú pháp của Code Bot…";
+        $("status").style.color = "#38bdf8";
+
+        const r = await fetch("/api/queue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: fileContent,
+            lang: $("lang").value,
+            room: $("room").value.trim(),
+            fileName: selectedFileName,
+          }),
+        });
+        const j = await r.json();
+
+        if (!r.ok) {
+          $("status").textContent = "❌ " + j.error;
+          $("status").style.color = "var(--red)";
+        } else {
+          $("status").style.color = "var(--ok)";
+          if (j.waitingOpponent) {
+            $("status").textContent =
+              "⏳ Code hợp lệ! Đã nhận code, đang chờ đối thủ tải code...";
+          } else {
+            $("status").textContent =
+              "⚡ Đã đủ 2 bên! Đang kích hoạt đếm ngược...";
+            lockUploadDuringMatch();
+          }
+        }
+      };
+
+      (function buildAxes() {
+        ["ranks"].forEach((id) => {
+          for (let r = 0; r < 9; r++)
+            $(id).appendChild(document.createElement("span")).textContent =
+              9 - r;
+        });
+        ["files"].forEach((id) => {
+          for (let c = 0; c < 9; c++)
+            $(id).appendChild(document.createElement("span")).textContent =
+              "abcdefghi"[c];
+        });
+      })();
+
+      initDefaultBoard();
+      renderBoard();
+      initApp();
+      async function apiCreateTour() {
+        const room = $("adminTourRoom").value.trim();
+        if (!room) return alert("Vui lòng nhập tên phòng giải đấu!");
+        try {
+          const r = await fetch("/api/tournament/create", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room })
+          });
+          const j = await r.json();
+          alert(j.message || j.error);
+        } catch (e) { alert("Lỗi mạng!"); }
+      }
+
+      async function apiMatchElo() {
+        const room = $("adminTourRoom").value.trim();
+        if (!room) return alert("Vui lòng nhập tên phòng giải đấu!");
+        try {
+          const r = await fetch("/api/tournament/match", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room })
+          });
+          const j = await r.json();
+          alert(j.message || j.error);
+        } catch (e) { alert("Lỗi mạng!"); }
+      }
+    </script>
+  </body>
+</html>
