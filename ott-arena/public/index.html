@@ -10,18 +10,19 @@
     />
     <style>
       :root {
-        --bg: #0b0f19;
-        --card: #111827;
-        --card-inner: #1f2937;
-        --line: #374151;
-        --ink: #f9fafb;
-        --muted: #9ca3af;
-        --red: #ef4444;
-        --blue: #3b82f6;
+        --bg: #090d16;
+        --card: #0f172a;
+        --card-inner: #1e293b;
+        --line: #334155;
+        --line-glow: #6366f1;
+        --ink: #f8fafc;
+        --muted: #94a3b8;
+        --red: #f43f5e;
+        --blue: #0ea5e9;
         --gold: #f59e0b;
         --ok: #10b981;
-        --primary: #2563eb;
-        --primary-hover: #1d4ed8;
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
         --font: "Be Vietnam Pro", sans-serif;
         --mono: "JetBrains Mono", monospace;
       }
@@ -81,7 +82,7 @@
       }
       .nav-item {
         background: transparent;
-        border: 0;
+        border: 1.5px solid transparent;
         padding: 8px 14px;
         font-weight: 600;
         font-size: 14px;
@@ -93,6 +94,7 @@
       .nav-item:hover {
         color: #fff;
         background: var(--card-inner);
+        border-color: var(--line);
       }
 
       .user-box {
@@ -246,31 +248,63 @@
         border-color: var(--primary);
       }
       .btn {
-        border: 0;
+        border: 1.5px solid rgba(255, 255, 255, 0.22);
         border-radius: 10px;
         padding: 11px 20px;
         font-weight: 700;
         cursor: pointer;
-        background: var(--primary);
+        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
         color: #fff;
-        transition: 0.2s;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .btn:hover {
-        background: var(--primary-hover);
+      .btn:hover:not(:disabled) {
+        border-color: rgba(255, 255, 255, 0.55);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+      }
+      .btn:active:not(:disabled) {
+        transform: translateY(0);
       }
       .btn:disabled {
-        opacity: 0.4;
+        opacity: 0.45;
         cursor: not-allowed;
         background: var(--line) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: none !important;
+        transform: none !important;
       }
       .btn.ghost {
         background: var(--card-inner);
-        border: 1px solid var(--line);
+        border: 1.5px solid var(--line);
         color: var(--ink);
+      }
+      .btn.ghost:hover:not(:disabled) {
+        border-color: var(--primary);
+        background: #242f46;
       }
       .btn.sm {
         padding: 6px 12px;
         font-size: 13px;
+      }
+
+      /* Giới hạn chiều cao và tạo thanh cuộn mượt cho Bảng Xếp Hạng & Lịch Sử Đấu */
+      #sec-rank .tblwrap,
+      #sec-history .tblwrap {
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1.5px solid var(--line);
+        border-radius: 14px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--line) transparent;
+      }
+      #sec-rank th,
+      #sec-history th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--card-inner);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
       }
 
       .turn-header {
@@ -1163,14 +1197,45 @@
                   readonly
                 />
               </div>
-              <button
-                id="btnFind"
-                class="btn"
-                style="width: 100%; margin-top: 12px"
-                disabled
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px">
+                <button
+                  id="btnSubmitBot"
+                  class="btn"
+                  style="width: 100%"
+                  disabled
+                >
+                  📤 1. Xác Nhận Nộp Code
+                </button>
+                <button
+                  id="btnFind"
+                  class="btn"
+                  style="
+                    width: 100%;
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    border-color: rgba(52, 211, 153, 0.4);
+                  "
+                  disabled
+                >
+                  ⚔️ 2. Vào Hàng Đợi Thi Đấu
+                </button>
+              </div>
+              <div
+                id="botReadyBadge"
+                style="
+                  display: none;
+                  margin-top: 8px;
+                  padding: 8px 12px;
+                  border-radius: 8px;
+                  background: rgba(16, 185, 129, 0.15);
+                  border: 1.5px solid #10b981;
+                  color: #34d399;
+                  font-weight: 700;
+                  font-size: 13px;
+                  text-align: center;
+                "
               >
-                Gửi Code & Thi Đấu
-              </button>
+                ✅ ĐÃ SẴN SÀNG THI ĐẤU
+              </div>
               <div
                 id="status"
                 style="
@@ -1419,6 +1484,8 @@
         }
       }
 
+      let isBotReady = false;
+
       function enableUpload(enable) {
         if (isPlaying) return;
         $("uploadZone").className = enable
@@ -1426,12 +1493,16 @@
           : "upload-zone disabled";
         $("fileInput").disabled = !enable;
         $("lang").disabled = !enable;
-        $("btnFind").disabled = !enable;
-        if (!enable)
+        $("btnSubmitBot").disabled = !enable || !fileContent.trim();
+        $("btnFind").disabled = !enable || !isBotReady;
+        if (!enable) {
           $("status").textContent =
             "Chưa có đối thủ. Màn hình nộp file tạm khóa.";
-        else
-          $("status").textContent = "Đã sẵn sàng. Hãy chọn File Code để gửi!";
+        } else {
+          $("status").textContent = isBotReady
+            ? "🟢 Đã nộp code sẵn sàng. Nhấn '2. Vào Hàng Đợi Thi Đấu'!"
+            : "Đã có đối thủ. Hãy chọn File Code và nhấn Nộp Code!";
+        }
       }
 
       function lockUploadDuringMatch() {
@@ -1439,6 +1510,7 @@
         $("uploadZone").className = "upload-zone disabled";
         $("fileInput").disabled = true;
         $("lang").disabled = true;
+        if ($("btnSubmitBot")) $("btnSubmitBot").disabled = true;
         $("btnFind").disabled = true;
 
         const statusEl = $("status");
@@ -1601,9 +1673,33 @@
         selectedFileName = f.name;
         $("fileName").textContent = "Đã chọn: " + f.name;
         const reader = new FileReader();
-        reader.onload = (evt) => (fileContent = evt.target.result);
+        reader.onload = (evt) => {
+          fileContent = evt.target.result;
+          isBotReady = false;
+          $("btnSubmitBot").disabled = false;
+          $("btnSubmitBot").textContent = "📤 1. Xác Nhận Nộp Code";
+          $("btnSubmitBot").style.background = "";
+          $("botReadyBadge").style.display = "none";
+          $("btnFind").disabled = true;
+          $("status").textContent = "Đã tải file. Bấm nút '1. Xác Nhận Nộp Code' để hoàn tất!";
+          $("status").style.color = "#38bdf8";
+        };
         reader.readAsText(f);
       };
+
+      if ($("btnSubmitBot")) {
+        $("btnSubmitBot").onclick = () => {
+          if (!fileContent.trim()) return alert("Vui lòng chọn File Code trước!");
+          isBotReady = true;
+          $("botReadyBadge").style.display = "block";
+          $("botReadyBadge").innerHTML = "✅ SẴN SÀNG: <b>" + selectedFileName + "</b>";
+          $("btnSubmitBot").textContent = "✅ Đã Nộp (" + selectedFileName + ")";
+          $("btnSubmitBot").style.background = "linear-gradient(135deg, #059669, #047857)";
+          $("btnFind").disabled = false;
+          $("status").textContent = "🟢 Code đã nộp xong! Bấm '2. Vào Hàng Đợi Thi Đấu' để ghép trận.";
+          $("status").style.color = "var(--ok)";
+        };
+      }
 
       function setAuthMode(register) {
         isRegisterMode = register;

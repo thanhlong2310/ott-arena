@@ -518,6 +518,9 @@ function startMatchCore(p1, p2, roomKey) {
     broadcastLiveMatches();
     store.recordMatch(result);
     broadcastSSE("refresh", {});
+
+    // Kiểm tra hàng đợi để kích hoạt trận tiếp theo
+    checkAndMatch();
   }, 3200);
 }
 
@@ -526,6 +529,12 @@ function startMatchCore(p1, p2, roomKey) {
 // ----------------------------------------------------
 async function checkAndMatch() {
   if (waitingQueue.length < 2) return;
+
+  // KIỂM TRA CHỊU TẢI: Giới hạn số trận đấu chạy đồng thời để bảo vệ CPU/RAM
+  const MAX_ACTIVE_MATCHES = parseInt(process.env.MAX_CONCURRENT_MATCHES) || 3;
+  if (activeMatches.size >= MAX_ACTIVE_MATCHES) {
+    return; // Đã đạt giới hạn số trận cùng lúc, các cặp khác tiếp tục xếp hàng chờ
+  }
 
   for (let i = 0; i < waitingQueue.length; i++) {
     for (let j = i + 1; j < waitingQueue.length; j++) {
