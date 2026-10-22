@@ -10,17 +10,17 @@
     />
     <style>
       :root {
-        --bg: #090d16;
-        --card: #0f172a;
-        --card-inner: #1e293b;
-        --line: #334155;
-        --line-glow: #6366f1;
-        --ink: #f8fafc;
-        --muted: #94a3b8;
+        --bg: #0f172a;
+        --card: #1e293b;
+        --card-inner: #334155;
+        --line: #475569;
+        --line-glow: #38bdf8;
+        --ink: #ffffff;
+        --muted: #cbd5e1;
         --red: #f43f5e;
-        --blue: #0ea5e9;
-        --gold: #f59e0b;
-        --ok: #10b981;
+        --blue: #38bdf8;
+        --gold: #fbbf24;
+        --ok: #34d399;
         --primary: #6366f1;
         --primary-hover: #4f46e5;
         --font: "Be Vietnam Pro", sans-serif;
@@ -52,7 +52,7 @@
         position: sticky;
         top: 0;
         z-index: 100;
-        background: rgba(17, 24, 39, 0.92);
+        background: rgba(30, 41, 59, 0.94);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid var(--line);
       }
@@ -200,11 +200,11 @@
       }
 
       .info-badge {
-        background: #0b0f19;
-        border: 1px solid var(--line);
+        background: #0f172a;
+        border: 1.5px solid var(--line);
         border-radius: 10px;
         padding: 10px 14px;
-        font-size: 12px;
+        font-size: 12.5px;
         color: var(--muted);
         margin-bottom: 16px;
         line-height: 1.6;
@@ -212,7 +212,7 @@
 
       .upload-zone {
         border: 2px dashed var(--line);
-        background: #0b0f19;
+        background: #0f172a;
         border-radius: 14px;
         padding: 20px;
         text-align: center;
@@ -221,6 +221,7 @@
       }
       .upload-zone:hover {
         border-color: var(--primary);
+        background: #1e293b;
       }
       .upload-zone.disabled {
         opacity: 0.4;
@@ -236,8 +237,8 @@
         margin-top: 12px;
       }
       .field {
-        background: #0b0f19;
-        border: 1px solid var(--line);
+        background: #0f172a;
+        border: 1.5px solid var(--line);
         border-radius: 10px;
         padding: 11px 14px;
         width: 100%;
@@ -480,7 +481,8 @@
       .modal-card {
         width: 90%;
         max-width: 440px;
-        background: #111827;
+        background: #1e293b;
+        border: 1.5px solid var(--line);
         border-radius: 20px;
         padding: 36px 28px;
         text-align: center;
@@ -532,14 +534,14 @@
       }
 
       .move-log {
-        background: #0b0f19;
-        border: 1px solid var(--line);
+        background: #0f172a;
+        border: 1.5px solid var(--line);
         border-radius: 10px;
         padding: 10px 14px;
         height: 260px;
         overflow-y: auto;
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 12.5px;
         color: var(--muted);
         margin-top: 10px;
       }
