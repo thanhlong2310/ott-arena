@@ -984,6 +984,9 @@
           <button class="nav-item" onclick="scrollToSection('sec-history')">
             📜 Lịch Sử Đấu
           </button>
+          <button class="nav-item" onclick="handleRulesNav()">
+            📖 Luật Chơi
+          </button>
           <button class="nav-item" onclick="scrollToSection('sec-tournaments')">
             🗓️ Sự Kiện
           </button>
@@ -1150,6 +1153,68 @@
           </div>
         </section>
 
+        <!-- MỤC LUẬT CHƠI & QUY TẮC THI ĐẤU -->
+        <section class="card" id="sec-rules">
+          <h2 style="color: #60a5fa;">📖 Luật Chơi & Quy Tắc Thi Đấu OTTv2</h2>
+          <div style="color: var(--muted); margin-bottom: 20px; font-size: 14px; line-height: 1.6;">
+            Cẩm nang chi tiết về cấu trúc bàn cờ 9x9, quy tắc di chuyển, khắc chế Búa - Kéo - Bao và các điều kiện giành chiến thắng.
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <!-- Box 1: Mục tiêu chiến thắng -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+              <h3 style="color: #fde047; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                🏆 1. Điều Kiện Giành Chiến Thắng
+              </h3>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+                <li><b>Chạm Đích:</b> Quân RED chạm ô đích <b style="color:var(--red)">a1 [8, 0]</b> HOẶC quân BLUE chạm ô <b style="color:var(--blue)">i9 [0, 8]</b>.</li>
+                <li><b>Ăn Sạch 1 Loại Quân:</b> Ăn sạch toàn bộ 1 chủng loại quân (hết Búa, hoặc hết Kéo, hoặc hết Bao) của đối thủ.</li>
+                <li><b>Đối Phương Phạm Quy:</b> Bot đối thủ ném exception, quá giờ (timeout) hoặc đi sai luật cờ.</li>
+                <li><b>Hòa Cờ:</b> Vượt quá 200 nước đi (plies) mà chưa phân định thắng thua.</li>
+              </ul>
+            </div>
+
+            <!-- Box 2: Quy tắc di chuyển & ăn quân -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+              <h3 style="color: #60a5fa; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                ⚔️ 2. Quy Tắc Di Chuyển & Ăn Quân
+              </h3>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+                <li><b>Di Chuyển:</b> Mỗi lượt đi <b>tối đa 1 ô</b> theo 8 hướng (ngang, dọc, chéo). Không được đứng im.</li>
+                <li><b>Tránh Đè Quân:</b> Tuyệt đối không được đi vào ô đang có quân của phe mình.</li>
+                <li><b>Khắc Chế Búa - Kéo - Bao:</b>
+                  <div style="margin-top: 6px; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; font-weight: 600; font-size: 12.5px; line-height: 1.6;">
+                    🪨 <b>Búa (R)</b> ➔ Ăn được ✂️ <b>Kéo (S)</b><br>
+                    ✂️ <b>Kéo (S)</b> ➔ Ăn được 📄 <b>Bao (P)</b><br>
+                    📄 <b>Bao (P)</b> ➔ Ăn được 🪨 <b>Búa (R)</b>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Box 3: Quy định kỹ thuật Bot -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+              <h3 style="color: #34d399; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                🤖 3. Quy Định Kỹ Thuật Code Bot
+              </h3>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+                <li><b>Thời Gian Tính Toán:</b> Tối đa <b>1.5s</b> (JavaScript) hoặc <b>2.0s</b> (Python / C++).</li>
+                <li><b>Hàm Bắt Buộc:</b> Code phải chứa hàm <code style="color:#fde047; background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px;">getMove(state)</code>.</li>
+                <li><b>Định Dạng Trả Về:</b>
+                  <pre style="margin: 6px 0 0; padding: 6px 10px; background: rgba(0,0,0,0.4); border-radius: 6px; font-size: 12px; color: #38bdf8; font-family: var(--mono);">return { from: [r1, c1], to: [r2, c2] };</pre>
+                </li>
+                <li><b>Tọa Độ:</b> Hàng 0–8, Cột 0–8 (Góc trên-trái [0, 0] là ô a9).</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Banner giải thích các hành vi phạm quy -->
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #fca5a5; line-height: 1.6;">
+            <b>⚠️ Các Hành Vi Bị Xử Phạt Phạm Quy:</b>
+            Đi ra ngoài bàn cờ, di chuyển quá 1 ô, tự đè quân mình, cố tình ăn quân đối thủ khi không khắc chế (hoặc hòa chủng loại), code ném exception hoặc chạy quá thời gian (timeout). <i>(Lưu ý: Nếu Admin bật tính năng "Bảo vệ Bot lỗi", hệ thống sẽ tự động cứu Bot bằng 1 nước đi ngẫu nhiên hợp lệ thay vì xử thua).</i>
+          </div>
+        </section>
+
         <section class="card" id="sec-join-room">
           <h2>⚔️ Tạo Hoặc Vào Phòng Đấu</h2>
           <div class="row" style="max-width: 560px; margin-top: 10px">
@@ -1170,9 +1235,12 @@
       </div>
 
       <div id="arenaView" hidden>
-        <div style="margin-bottom: 16px">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
           <button class="btn ghost sm" onclick="goHome()">
             ← Quay lại Trang Chủ
+          </button>
+          <button class="btn ghost sm" onclick="openRulesModal()" style="color: #fde047; border-color: rgba(253, 224, 71, 0.3);">
+            📖 Xem Luật Chơi
           </button>
         </div>
 
@@ -1321,6 +1389,58 @@
         </section>
       </div>
     </main>
+    <!-- MODAL LUẬT CHƠI DÀNH CHO NGƯỜI DÙNG & THÍ SINH -->
+    <div id="rulesModal" class="modal-overlay" hidden>
+      <div class="modal-card spectator" style="max-width: 720px; text-align: left; padding: 26px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 20px; color: #fff; display: flex; align-items: center; gap: 8px;">
+            📖 Luật Chơi & Quy Tắc Thi Đấu OTTv2
+          </h3>
+          <button class="btn ghost sm" onclick="closeRulesModal()" type="button">✕ Đóng</button>
+        </div>
+
+        <div style="color: var(--muted); font-size: 13.5px; line-height: 1.7; max-height: 68vh; overflow-y: auto; padding-right: 8px;">
+          <!-- Khối 1: Mục tiêu chiến thắng -->
+          <div style="background: rgba(253, 224, 71, 0.08); border-left: 3px solid var(--gold); padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;">
+            <b style="color: #fde047; font-size: 14.5px;">🏆 1. Điều Kiện Giành Chiến Thắng</b><br>
+            • <b>Chạm Đích:</b> Phe RED đưa quân đến ô <b style="color:var(--red)">a1 [8, 0]</b> HOẶC phe BLUE đưa quân đến ô <b style="color:var(--blue)">i9 [0, 8]</b>.<br>
+            • <b>Tuyệt Chủng Quân:</b> Ăn sạch toàn bộ 1 trong 3 chủng loại quân (hết Búa, hoặc hết Kéo, hoặc hết Bao) của đối phương.<br>
+            • <b>Đối Thủ Phạm Quy:</b> Bot đối phương lỗi code, ném exception, quá giờ (timeout) hoặc đi sai luật.<br>
+            • <b>Hòa Cờ:</b> Vượt quá 200 nước đi (plies) mà chưa bên nào đạt điều kiện thắng.
+          </div>
+
+          <!-- Khối 2: Di chuyển & Ăn quân -->
+          <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary); padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;">
+            <b style="color: #38bdf8; font-size: 14.5px;">⚔️ 2. Quy Tắc Di Chuyển & Ăn Quân</b><br>
+            • <b>Di Chuyển:</b> Mỗi lượt đi <b>tối đa 1 ô</b> theo 8 hướng (ngang, dọc, chéo). Không được đứng im tại chỗ.<br>
+            • <b>Tránh Đè Quân:</b> Tuyệt đối không được đi vào ô đang có quân của phe mình.<br>
+            • <b>Khắc Chế Búa - Kéo - Bao:</b>
+              <div style="margin-top: 6px; padding: 6px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; font-weight: 600; color: #fff;">
+                🪨 <b>Búa (R)</b> ➔ Thắng ✂️ <b>Kéo (S)</b> &nbsp;|&nbsp; 
+                ✂️ <b>Kéo (S)</b> ➔ Thắng 📄 <b>Bao (P)</b> &nbsp;|&nbsp; 
+                📄 <b>Bao (P)</b> ➔ Thắng 🪨 <b>Búa (R)</b>
+              </div>
+          </div>
+
+          <!-- Khối 3: Quy định kỹ thuật code -->
+          <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;">
+            <b style="color: #34d399; font-size: 14.5px;">🤖 3. Quy Định Kỹ Thuật Cho Code Bot</b><br>
+            • <b>Thời Gian Giới Hạn:</b> Tối đa <b>1.5 giây</b> (JavaScript) hoặc <b>2.0 giây</b> (Python / C++).<br>
+            • <b>Hàm Bắt Buộc:</b> File nộp phải chứa hàm <code style="color: #fde047;">getMove(state)</code>.<br>
+            • <b>Định Dạng Trả Về:</b> <code style="color: #38bdf8;">{ from: [hàng_từ, cột_từ], to: [hàng_đến, cột_đến] }</code>.<br>
+            • <b>Tọa Độ:</b> Hàng 0–8, Cột 0–8 (Góc trên-trái là [0, 0], góc dưới-phải là [8, 8]).
+          </div>
+
+          <!-- Khối 4: Cảnh báo phạm quy -->
+          <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--red); padding: 12px 14px; border-radius: 8px;">
+            <b style="color: #f87171; font-size: 14.5px;">⚠️ 4. Các Hành Vi Xử Phạt Phạm Quy</b><br>
+            Đi ra ngoài bàn cờ, di chuyển quá 1 ô, tự đè quân mình, cố tình ăn quân đối thủ khi không khắc chế (hoặc hòa chủng loại), code ném exception hoặc chạy quá thời gian.<br>
+            <i>(Nếu Admin bật "Bảo vệ Bot lỗi", hệ thống sẽ tự động cứu Bot bằng 1 nước đi ngẫu nhiên hợp lệ thay vì xử thua).</i>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL HƯỚNG DẪN LAN DÀNH CHO ADMIN / BAN TỔ CHỨC -->
 <div id="lanGuideModal" class="modal-overlay" hidden>
   <div class="modal-card spectator" style="max-width: 680px; text-align: left; padding: 28px;">
@@ -1904,6 +2024,27 @@ function closeLanModal() {
 $("lanGuideModal").addEventListener("click", (e) => {
   if (e.target === $("lanGuideModal")) closeLanModal();
 });
+
+      // ====== HÀM ĐIỀU KHIỂN MODAL & CUỘN LUẬT CHƠI ======
+      function handleRulesNav() {
+        if ($("homeView").hidden) {
+          openRulesModal();
+        } else {
+          scrollToSection("sec-rules");
+        }
+      }
+
+      function openRulesModal() {
+        $("rulesModal").hidden = false;
+      }
+
+      function closeRulesModal() {
+        $("rulesModal").hidden = true;
+      }
+
+      $("rulesModal").addEventListener("click", (e) => {
+        if (e.target === $("rulesModal")) closeRulesModal();
+      });
 
       async function loadHist() {
         const { matches } = await (await fetch("/api/history?limit=20")).json();
