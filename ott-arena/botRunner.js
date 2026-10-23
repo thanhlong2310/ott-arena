@@ -5,7 +5,6 @@ const path = require("path");
 const os = require("os");
 const { OTTGame } = require("./game");
 
-// Kiểm tra xem hệ thống có hỗ trợ công cụ sandbox bwrap (Linux) hay không
 let hasBwrap = false;
 if (process.platform !== "win32") {
   try {
@@ -16,12 +15,64 @@ if (process.platform !== "win32") {
   }
 }
 
-// Hàm thực thi Code Bot hỗ trợ JS, Python và C++
+// Hàm đọc mảng xếp cờ getSetup(state) từ Bot
+function runBotSetup(botEntry, side) {
+  return new Promise((resolve) => {
+    const { code, lang } = botEntry;
+    const mockState = { side };
+
+    if (lang === "javascript" || !lang) {
+      try {
+        const script = `
+          ${code}
+          if (typeof getSetup === "function") return getSetup(${JSON.stringify(mockState)});
+          return null;
+        `;
+        const setup = new Function(script)();
+        if (Array.isArray(setup) && setup.length === 10) return resolve(setup);
+      } catch (e) {}
+      return resolve(null);
+    }
+
+    if (lang === "python") {
+      const tmpDir = os.tmpdir();
+      const id = Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+      const pyPath = path.join(tmpDir, `setup_${id}.py`);
+      const pyRunner = `
+import sys, json
+${code}
+if __name__ == '__main__':
+    try:
+        input_state = json.loads(sys.argv[1])
+        if 'getSetup' in globals():
+            res = getSetup(input_state)
+            print(json.dumps(res))
+    except Exception as e:
+        sys.exit(1)
+`;
+      fs.writeFileSync(pyPath, pyRunner, "utf8");
+      const pythonBin = process.platform === "win32" ? "python" : "python3";
+      const proc = spawn(pythonBin, [pyPath, JSON.stringify(mockState)]);
+      let out = "";
+      proc.stdout.on("data", (d) => (out += d.toString()));
+      proc.on("close", () => {
+        try { fs.unlinkSync(pyPath); } catch (e) {}
+        try {
+          const arr = JSON.parse(out.trim());
+          resolve(Array.isArray(arr) && arr.length === 10 ? arr : null);
+        } catch (e) { resolve(null); }
+      });
+      return;
+    }
+
+    resolve(null);
+  });
+}
+
 function runBotScript(botEntry, state) {
   return new Promise((resolve) => {
     const { code, lang } = botEntry;
 
-    // 1. CHẠY JAVASCRIPT
     if (lang === "javascript" || !lang) {
       const script = `
         const { parentPort, workerData } = require('worker_threads');
@@ -52,7 +103,6 @@ function runBotScript(botEntry, state) {
           return;
         }
 
-        //console.log("[BOT JS MOVE]", JSON.stringify(msg?.move));
         resolve(msg?.move ?? null);
       });
       worker.on("error", () => {
@@ -63,7 +113,6 @@ function runBotScript(botEntry, state) {
       return;
     }
 
-    // 2. CHẠY PYTHON & C++ QUA FILE TẠM
     const tmpDir = os.tmpdir();
     const id = Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
@@ -81,18 +130,17 @@ if __name__ == '__main__':
             res = getMove(input_data)
             print(json.dumps(res))
     except Exception as e:
-    import traceback
-    traceback.print_exc(file=sys.stderr)
-    sys.exit(1)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 `;
       fs.writeFileSync(pyPath, pyRunner, "utf8");
 
-      // Chạy Python (Ưu tiên dùng bwrap sandbox trên Linux, fallback trực tiếp nếu không có)
       const pythonBin = process.platform === "win32" ? "python" : "python3";
       const proc = hasBwrap
         ? spawn("bwrap", [
-            "--dev-bind", "/", "/",    // Ánh xạ toàn bộ ổ đĩa hiện tại vào sandbox để Python không bị lỗi thiếu thư viện
-            "--unshare-net",           // Cắt toàn bộ kết nối mạng (Network Isolation)
+            "--dev-bind", "/", "/",
+            "--unshare-net",
             "python3", 
             pyPath, 
             JSON.stringify(state)
@@ -112,17 +160,13 @@ if __name__ == '__main__':
 
       timer = setTimeout(() => {
         proc.kill();
-        try {
-          fs.unlinkSync(pyPath);
-        } catch (e) {}
+        try { fs.unlinkSync(pyPath); } catch (e) {}
         resolve(null);
       }, 2000);
 
       proc.on("close", () => {
         clearTimeout(timer);
-        try {
-          fs.unlinkSync(pyPath);
-        } catch (e) {}
+        try { fs.unlinkSync(pyPath); } catch (e) {}
         try {
           resolve(JSON.parse(out.trim()));
         } catch (e) {
@@ -138,7 +182,6 @@ if __name__ == '__main__':
 
       fs.writeFileSync(cppPath, code, "utf8");
 
-      // Biên dịch C++ bằng g++
       const compile = spawn("g++", ["-O2", cppPath, "-o", binPath]);
       
       compile.on("error", (err) => {
@@ -148,12 +191,9 @@ if __name__ == '__main__':
       });
 
       compile.on("close", (codeExit) => {
-        try {
-          fs.unlinkSync(cppPath);
-        } catch (e) {}
+        try { fs.unlinkSync(cppPath); } catch (e) {}
         if (codeExit !== 0) return resolve(null);
 
-        // Chạy tệp nhị phân C++ (Ưu tiên dùng bwrap sandbox trên Linux, fallback trực tiếp nếu không có)
         const proc = hasBwrap
           ? spawn("bwrap", [
               "--dev-bind", "/", "/",
@@ -176,17 +216,13 @@ if __name__ == '__main__':
 
         timer = setTimeout(() => {
           proc.kill();
-          try {
-            fs.unlinkSync(binPath);
-          } catch (e) {}
+          try { fs.unlinkSync(binPath); } catch (e) {}
           resolve(null);
         }, 2000);
 
         proc.on("close", () => {
           clearTimeout(timer);
-          try {
-            fs.unlinkSync(binPath);
-          } catch (e) {}
+          try { fs.unlinkSync(binPath); } catch (e) {}
           try {
             resolve(JSON.parse(out.trim()));
           } catch (e) {
@@ -201,19 +237,24 @@ if __name__ == '__main__':
   });
 }
 
-// Chạy trận đấu tự động giữa 2 Bot với Cấu hình luật tuỳ chỉnh
 async function runMatch(p1, p2, onUpdate, rules = {}) {
+  // Đọc thiết lập xếp cờ tự do từ file Bot
+  const redSetup = await runBotSetup(p1, "RED");
+  const blueSetup = await runBotSetup(p2, "BLUE");
+
   const game = new OTTGame(
     p1.user.displayName || p1.user.username,
     p2.user.displayName || p2.user.username,
-    null,
-    null,
+    redSetup,
+    blueSetup,
     rules,
   );
 
   let plies = 0;
   const maxPlies = 200;
   const stepDelay = Math.max(50, Math.min(5000, Number(rules?.stepDelay) || 600));
+  
+  // Đồng bộ kiểm tra thuộc tính bảo vệ
   const protectBotError = rules?.protectBotError !== false;
 
   while (!game.isFinished() && plies < maxPlies) {
@@ -225,10 +266,8 @@ async function runMatch(p1, p2, onUpdate, rules = {}) {
 
     if (!move || !game.makeMove(currentTurn, move)) {
       if (protectBotError) {
-        // Tự động chọn nước đi ngẫu nhiên từ danh sách nước đi hợp lệ khi Bot lỗi/phạm quy
         const legalMoves = game.getLegalMoves(currentTurn);
         if (legalMoves.length > 0) {
-          // Ưu tiên nước đi chạm ô đích để thắng nếu có
           const winMove = legalMoves.find((m) =>
             currentTurn === "RED" ? (m.to[0] === 8 && m.to[1] === 0) : (m.to[0] === 0 && m.to[1] === 8)
           );

@@ -22,31 +22,58 @@ class OTTGame {
     this.initialState = this.getSnapshot();
   }
 
-  // Khởi tạo vị trí quân cờ tuỳ chỉnh của người chơi nếu có
   initBoard(customRed = null, customBlue = null) {
-    const defaultRed = ["R", "R", "R", "P", "P", "P", "P", "S", "S", "S"];
-    const redPieces =
-      customRed && customRed.length === 10 ? customRed : defaultRed;
-    let idx = 0;
-    for (let r = 0; r < 2; r++) {
-      for (let c = 0; c < 5; c++) {
-        if (idx < redPieces.length) {
-          this.board[r][c] = { t: redPieces[idx++], o: "RED" };
+    const defaultRed = [
+      { r: 0, c: 0, t: "R" }, { r: 0, c: 1, t: "R" }, { r: 0, c: 2, t: "R" },
+      { r: 0, c: 3, t: "P" }, { r: 0, c: 4, t: "P" }, { r: 1, c: 0, t: "P" },
+      { r: 1, c: 1, t: "P" }, { r: 1, c: 2, t: "S" }, { r: 1, c: 3, t: "S" }, { r: 1, c: 4, t: "S" }
+    ];
+    
+    const defaultBlue = [
+      { r: 7, c: 4, t: "R" }, { r: 7, c: 5, t: "R" }, { r: 7, c: 6, t: "R" },
+      { r: 7, c: 7, t: "P" }, { r: 7, c: 8, t: "P" }, { r: 8, c: 4, t: "P" },
+      { r: 8, c: 5, t: "P" }, { r: 8, c: 6, t: "S" }, { r: 8, c: 7, t: "S" }, { r: 8, c: 8, t: "S" }
+    ];
+
+    // Xử lý vị trí custom RED
+    let redCount = 0;
+    if (Array.isArray(customRed) && customRed.length === 10) {
+      customRed.forEach(p => {
+        if (p && typeof p === 'object' && p.r !== undefined && p.c !== undefined && p.t) {
+          if (p.r >= 0 && p.r <= 3 && p.c >= 0 && p.c <= 8 && !this.board[p.r][p.c]) {
+            this.board[p.r][p.c] = { t: p.t, o: "RED" };
+            redCount++;
+          }
         }
-      }
+      });
+    }
+    if (redCount < 10) {
+      this.clearSide("RED");
+      defaultRed.forEach(p => this.board[p.r][p.c] = { t: p.t, o: "RED" });
     }
 
-    const defaultBlue = ["R", "R", "R", "P", "P", "P", "P", "S", "S", "S"];
-    const bluePieces =
-      customBlue && customBlue.length === 10 ? customBlue : defaultBlue;
-    idx = 0;
-    for (let r = 7; r < 9; r++) {
-      for (let c = 4; c < 9; c++) {
-        if (idx < bluePieces.length) {
-          this.board[r][c] = { t: bluePieces[idx++], o: "BLUE" };
+    // Xử lý vị trí custom BLUE
+    let blueCount = 0;
+    if (Array.isArray(customBlue) && customBlue.length === 10) {
+      customBlue.forEach(p => {
+        if (p && typeof p === 'object' && p.r !== undefined && p.c !== undefined && p.t) {
+          if (p.r >= 5 && p.r <= 8 && p.c >= 0 && p.c <= 8 && !this.board[p.r][p.c]) {
+            this.board[p.r][p.c] = { t: p.t, o: "BLUE" };
+            blueCount++;
+          }
         }
-      }
+      });
     }
+    if (blueCount < 10) {
+      this.clearSide("BLUE");
+      defaultBlue.forEach(p => this.board[p.r][p.c] = { t: p.t, o: "BLUE" });
+    }
+  }
+
+  clearSide(side) {
+    for (let r = 0; r < 9; r++)
+      for (let c = 0; c < 9; c++)
+        if (this.board[r][c] && this.board[r][c].o === side) this.board[r][c] = null;
   }
 
   getSnapshot() {
@@ -73,7 +100,7 @@ class OTTGame {
 
   beats(t1, t2) {
     if (this.rules && this.rules.enforceRPS === false) {
-      return true; // Tắt luật Búa - Kéo - Bao: Quân nào cũng có thể ăn quân địch
+      return true;
     }
     if (t1 === t2) return false;
     if (t1 === "R" && t2 === "S") return true;
@@ -102,7 +129,7 @@ class OTTGame {
 
           const destPiece = this.board[tr][tc];
           if (destPiece) {
-            if (destPiece.o === side) continue; // Không thể đi vào ô quân mình
+            if (destPiece.o === side) continue;
             if (this.beats(piece.t, destPiece.t)) {
               moves.push({ from: [r, c], to: [tr, tc] });
             }
