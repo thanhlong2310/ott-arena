@@ -9,17 +9,38 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
+let memoryCache = null;
+
 function initStore() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
   if (!fs.existsSync(DATA_FILE)) {
+    const defaultAdminHash = hashPassword("admin123456");
     const initialData = {
-      players: {},
+      players: {
+        admin: {
+          username: "admin",
+          displayName: "Admin",
+          elo: 1000,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+        },
+      },
       history: [],
-      accounts: {},
+      accounts: {
+        admin: {
+          id: "u_admin",
+          username: "admin",
+          displayName: "Admin",
+          passwordHash: defaultAdminHash,
+          role: "admin",
+          createdAt: new Date().toISOString(),
+        },
+      },
     };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2), "utf8");
   }
 }
 
@@ -27,15 +48,27 @@ function readData() {
   initStore();
   try {
     const raw = fs.readFileSync(DATA_FILE, "utf8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      memoryCache = parsed;
+      return parsed;
+    }
   } catch (e) {
-    return { players: {}, history: [], accounts: {} };
+    if (memoryCache) return memoryCache;
   }
+  return memoryCache || { players: {}, history: [], accounts: {} };
 }
 
 function saveData(data) {
   initStore();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  memoryCache = data;
+  try {
+    const tmpFile = DATA_FILE + ".tmp";
+    fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), "utf8");
+    fs.renameSync(tmpFile, DATA_FILE);
+  } catch (e) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+  }
 }
 
 const SECRET_ADMIN_CODE = "2026";

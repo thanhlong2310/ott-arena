@@ -1920,6 +1920,9 @@
           if (!r.ok)
             throw new Error(j.error || "Không thể xác thực tài khoản.");
           myUsername = username;
+          try {
+            localStorage.setItem("ott_saved_username", username);
+          } catch (e) {}
           location.reload();
         } catch (e) {
           fail(e.message || "Không thể kết nối máy chủ.");
@@ -2233,6 +2236,12 @@ $("lanGuideModal").addEventListener("click", (e) => {
       });
 
       function initApp() {
+        try {
+          const savedUser = localStorage.getItem("ott_saved_username");
+          if (savedUser && $("loginName") && !$("loginName").value) {
+            $("loginName").value = savedUser;
+          }
+        } catch (e) {}
         loadMe();
         loadRank();
         loadHist();

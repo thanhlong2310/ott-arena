@@ -1,5 +1,4 @@
 node_modules/
 audit.log
-data/ott-data.json
 .DS_Store
 *.log

@@ -69,14 +69,14 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 const sessionMiddleware = session({
-  secret: "ott-arena-secret-key-2026", // Đừng quên đưa secret này vào biến môi trường (.env) khi đưa lên server thật
-  name: "ott_session", // Đổi tên cookie mặc định (connect.sid) để tránh bị nhận diện dễ dàng
+  secret: process.env.SESSION_SECRET || "ott-arena-secret-key-2026",
+  name: "ott_session",
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày (lưu phiên đăng nhập lâu dài)
     httpOnly: true,  // Ngăn chặn mã độc JavaScript (XSS) đọc trộm cookie
-    secure: process.env.NODE_ENV === 'production', // Chuyển thành true nếu chạy qua HTTPS/Nginx
+    secure: "auto",  // Tự động thích ứng HTTPS / HTTP qua Render/Cloudflare Proxy
     sameSite: 'lax'  // Chống tấn công lừa đảo CSRF
   },
 });
@@ -143,10 +143,10 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// 2. Giới hạn khắt khe cho Đăng nhập / Đăng ký (Chống Brute Force)
+// 2. Giới hạn khắt khe cho Đăng nhập / Đăng ký (100 lượt thử / 15 phút, tránh nghẽn phòng thi/LAN)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // Khung thời gian: 15 phút
-  max: 10, // Tối đa 10 lần thử / 15 phút / 1 IP
+  max: 100, // Tối đa 100 lần thử / 15 phút / 1 IP
   message: { error: "Thao tác đăng nhập/đăng ký quá nhiều lần. Vui lòng đợi 15 phút." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -258,8 +258,23 @@ app.post("/api/register", authLimiter, (req, res) => {
       displayName: user.displayName,
       role: user.role
     };
-    auditLog(req, "REGISTER_SUCCESS", `Tạo tài khoản mới: ${username}`);
-    res.json({ success: true, user: req.session.user });
+
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const rawIp = req.ip || req.socket.remoteAddress;
+    const currentSubnet = getSubnet(rawIp);
+    const fingerprintBasis = (process.env.ENABLE_LAN_ONLY === 'true')
+      ? `${currentSubnet}|${userAgent}`
+      : `${userAgent}`;
+    req.session.deviceHash = crypto.createHash('sha256').update(fingerprintBasis).digest('hex');
+
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error("Lỗi lưu session register:", saveErr);
+        return res.status(500).json({ error: "Lỗi lưu phiên đăng nhập." });
+      }
+      auditLog(req, "REGISTER_SUCCESS", `Tạo tài khoản mới: ${username}`);
+      res.json({ success: true, user: req.session.user });
+    });
   } catch (err) {
     auditLog(req, "REGISTER_FAILED", `Lỗi: ${err.message}`);
     res.status(400).json({ error: err.message });
@@ -283,9 +298,23 @@ app.post("/api/login", authLimiter, (req, res) => {
     displayName: user.displayName,
     role: user.role
   };
-  
-  auditLog(req, "LOGIN_SUCCESS", `Đăng nhập thành công`);
-  res.json({ success: true, user: req.session.user });
+
+  const userAgent = req.headers['user-agent'] || 'unknown';
+  const rawIp = req.ip || req.socket.remoteAddress;
+  const currentSubnet = getSubnet(rawIp);
+  const fingerprintBasis = (process.env.ENABLE_LAN_ONLY === 'true')
+    ? `${currentSubnet}|${userAgent}`
+    : `${userAgent}`;
+  req.session.deviceHash = crypto.createHash('sha256').update(fingerprintBasis).digest('hex');
+
+  req.session.save((saveErr) => {
+    if (saveErr) {
+      console.error("Lỗi lưu session login:", saveErr);
+      return res.status(500).json({ error: "Lỗi lưu phiên đăng nhập." });
+    }
+    auditLog(req, "LOGIN_SUCCESS", `Đăng nhập thành công`);
+    res.json({ success: true, user: req.session.user });
+  });
 });
 
 app.get("/api/logout", (req, res) => {
