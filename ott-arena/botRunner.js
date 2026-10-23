@@ -201,36 +201,63 @@ if __name__ == '__main__':
   });
 }
 
-// Chạy trận đấu tự động giữa 2 Bot
-async function runMatch(p1, p2, onUpdate) {
+// Chạy trận đấu tự động giữa 2 Bot với Cấu hình luật tuỳ chỉnh
+async function runMatch(p1, p2, onUpdate, rules = {}) {
   const game = new OTTGame(
     p1.user.displayName || p1.user.username,
     p2.user.displayName || p2.user.username,
+    null,
+    null,
+    rules,
   );
 
   let plies = 0;
   const maxPlies = 200;
+  const stepDelay = Math.max(50, Math.min(5000, Number(rules?.stepDelay) || 600));
+  const protectBotError = rules?.protectBotError !== false;
 
   while (!game.isFinished() && plies < maxPlies) {
     const currentTurn = game.turn;
     const currentBot = currentTurn === "RED" ? p1 : p2;
     const state = game.getStateForPlayer(currentTurn);
 
-    const move = await runBotScript(currentBot, state);
+    let move = await runBotScript(currentBot, state);
 
     if (!move || !game.makeMove(currentTurn, move)) {
-      const winner = currentTurn === "RED" ? "BLUE" : "RED";
-      game.finishMatch(
-        winner,
-        `Phe ${currentTurn} đưa ra nước đi không hợp lệ hoặc phạm quy!`,
-      );
-      if (onUpdate) onUpdate({ state: game.getSnapshot(), move: null });
-      break;
+      if (protectBotError) {
+        // Tự động chọn nước đi ngẫu nhiên từ danh sách nước đi hợp lệ khi Bot lỗi/phạm quy
+        const legalMoves = game.getLegalMoves(currentTurn);
+        if (legalMoves.length > 0) {
+          // Ưu tiên nước đi chạm ô đích để thắng nếu có
+          const winMove = legalMoves.find((m) =>
+            currentTurn === "RED" ? (m.to[0] === 8 && m.to[1] === 0) : (m.to[0] === 0 && m.to[1] === 8)
+          );
+          const chosenMove = winMove || legalMoves[Math.floor(Math.random() * legalMoves.length)];
+          game.makeMove(currentTurn, chosenMove);
+          move = chosenMove;
+        } else {
+          const winner = currentTurn === "RED" ? "BLUE" : "RED";
+          game.finishMatch(
+            winner,
+            `Phe ${currentTurn} đã hết nước đi hợp lệ trên bàn cờ!`,
+          );
+          if (onUpdate) onUpdate({ state: game.getSnapshot(), move: null });
+          break;
+        }
+      } else {
+        const winner = currentTurn === "RED" ? "BLUE" : "RED";
+        game.finishMatch(
+          winner,
+          `Phe ${currentTurn} đưa ra nước đi không hợp lệ hoặc phạm quy!`,
+        );
+        if (onUpdate) onUpdate({ state: game.getSnapshot(), move: null });
+        break;
+      }
     }
 
     plies++;
     if (onUpdate) onUpdate({ state: game.getSnapshot(), move });
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, stepDelay));
   }
 
   if (!game.isFinished() && plies >= maxPlies) {

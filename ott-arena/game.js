@@ -4,9 +4,11 @@ class OTTGame {
     blueName = "BLUE",
     customRedPieces = null,
     customBluePieces = null,
+    rules = {},
   ) {
     this.redName = redName;
     this.blueName = blueName;
+    this.rules = rules || {};
     this.board = Array(9)
       .fill(null)
       .map(() => Array(9).fill(null));
@@ -14,10 +16,7 @@ class OTTGame {
     this.ply = 0;
     this.winner = null;
     this.finishReason = null;
-
-    this.winner = null;
-    this.finishReason = null;
-    this.moves = []; // <-- THÊM
+    this.moves = [];
 
     this.initBoard(customRedPieces, customBluePieces);
     this.initialState = this.getSnapshot();
@@ -73,11 +72,47 @@ class OTTGame {
   }
 
   beats(t1, t2) {
+    if (this.rules && this.rules.enforceRPS === false) {
+      return true; // Tắt luật Búa - Kéo - Bao: Quân nào cũng có thể ăn quân địch
+    }
     if (t1 === t2) return false;
     if (t1 === "R" && t2 === "S") return true;
     if (t1 === "S" && t2 === "P") return true;
     if (t1 === "P" && t2 === "R") return true;
     return false;
+  }
+
+  getLegalMoves(side) {
+    const moves = [];
+    const directions = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [ 0, -1],          [ 0, 1],
+      [ 1, -1], [ 1, 0], [ 1, 1],
+    ];
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const piece = this.board[r][c];
+        if (!piece || piece.o !== side) continue;
+
+        for (const [dr, dc] of directions) {
+          const tr = r + dr;
+          const tc = c + dc;
+          if (!this.isValidPos(tr, tc)) continue;
+
+          const destPiece = this.board[tr][tc];
+          if (destPiece) {
+            if (destPiece.o === side) continue; // Không thể đi vào ô quân mình
+            if (this.beats(piece.t, destPiece.t)) {
+              moves.push({ from: [r, c], to: [tr, tc] });
+            }
+          } else {
+            moves.push({ from: [r, c], to: [tr, tc] });
+          }
+        }
+      }
+    }
+    return moves;
   }
 
   makeMove(side, move) {

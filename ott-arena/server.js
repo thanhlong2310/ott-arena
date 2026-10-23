@@ -547,12 +547,30 @@ app.post("/api/tournament/delete", (req, res) => {
 });
 
 // ----------------------------------------------------
+// 2.2 API ADMIN: QUẢN LÝ CẤU HÌNH LUẬT THI ĐẤU
+// ----------------------------------------------------
+app.get("/api/rules", (req, res) => {
+  res.json({ rules: store.getRules() });
+});
+
+app.post("/api/rules", (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: "Chỉ Admin mới có quyền thay đổi cấu hình luật thi đấu." });
+  }
+  const { protectBotError, enforceRPS, stepDelay } = req.body;
+  const updated = store.updateRules({ protectBotError, enforceRPS, stepDelay });
+  auditLog(req, "UPDATE_RULES", `Bảo vệ Bot: ${updated.protectBotError}, Luật Búa-Kéo-Bao: ${updated.enforceRPS}, Delay: ${updated.stepDelay}ms`);
+  res.json({ success: true, rules: updated, message: "✅ Đã lưu cấu hình luật thi đấu thành công!" });
+});
+
+// ----------------------------------------------------
 // 3. HÀM LÕI CHẠY TRẬN ĐẤU (DÙNG CHUNG)
 // ----------------------------------------------------
 function startMatchCore(p1, p2, roomKey) {
   const matchId = "m_" + Date.now() + Math.floor(Math.random() * 1000);
   const redName = p1.user.displayName || p1.user.username;
   const blueName = p2.user.displayName || p2.user.username;
+  const currentRules = store.getRules();
 
   activeMatches.set(matchId, {
     id: matchId, red: redName, blue: blueName,
@@ -583,7 +601,7 @@ function startMatchCore(p1, p2, roomKey) {
         matchId, update, room: roomKey, redName, blueName,
         redUser: p1.user.username, blueUser: p2.user.username,
       });
-    });
+    }, currentRules);
 
     const result = await matchPromise;
     activeMatches.delete(matchId);

@@ -180,6 +180,26 @@ function getMatchById(id) {
   return (data.history || []).find((m) => m.id === id) || null;
 }
 
+function getRules() {
+  const data = readData();
+  return {
+    protectBotError: data.rules?.protectBotError !== false,
+    enforceRPS: data.rules?.enforceRPS !== false,
+    stepDelay: Math.max(50, Math.min(5000, Number(data.rules?.stepDelay) || 600)),
+  };
+}
+
+function updateRules(newRules) {
+  const data = readData();
+  data.rules = {
+    protectBotError: newRules.protectBotError !== false,
+    enforceRPS: newRules.enforceRPS !== false,
+    stepDelay: Math.max(50, Math.min(5000, Number(newRules.stepDelay) || 600)),
+  };
+  saveData(data);
+  return data.rules;
+}
+
 module.exports = {
   registerUser,
   authenticateUser,
@@ -188,4 +208,6 @@ module.exports = {
   recordMatch,
   getMatchHistory,
   getMatchById,
+  getRules,
+  updateRules,
 };

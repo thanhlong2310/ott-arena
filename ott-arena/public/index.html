@@ -1064,7 +1064,35 @@
         </section>
         <!-- BẢNG ĐIỀU KHIỂN GIẢI ĐẤU (Ẩn mặc định) -->
         <section class="card" id="sec-admin-tour" hidden>
-          <h2 style="color: var(--gold);">👑 Quản Lý Giải Đấu (Bảng Admin)</h2>
+          <h2 style="color: var(--gold);">👑 Quản Lý Giải Đấu & Cấu Hình Luật (Bảng Admin)</h2>
+
+          <!-- TÙY CHỈNH QUY TẮC & LUẬT THI ĐẤU TRỰC TIẾP -->
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;">
+            <div style="color: #60a5fa; font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              ⚙️ Tùy Chỉnh Quy Tắc & Luật Thi Đấu Trực Tiếp
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 16px; font-size: 14px; color: #e2e8f0;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="ruleProtectBotError" style="width: 17px; height: 17px; accent-color: #2563eb; cursor: pointer;" checked>
+                <span><b>Bảo vệ Bot lỗi</b> (Tự động chọn nước đi ngẫu nhiên khi Code phạm quy/lỗi)</span>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="ruleEnforceRPS" style="width: 17px; height: 17px; accent-color: #2563eb; cursor: pointer;" checked>
+                <span><b>Bắt buộc tuân theo luật Búa - Kéo - Bao khi ăn quân</b></span>
+              </label>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>Tốc độ nước đi (ms):</span>
+                <input type="number" id="ruleStepDelay" class="field" value="600" min="50" max="3000" step="50" style="width: 80px; padding: 6px 10px; text-align: center; border-radius: 6px;">
+              </div>
+            </div>
+
+            <button class="btn" style="background: var(--gold); color: #000; font-weight: 700; padding: 9px 18px; border-radius: 8px;" onclick="apiSaveRules()">
+              💾 Lưu Cấu Hình Luật
+            </button>
+          </div>
+
           <div style="color: var(--muted); margin-bottom: 14px; font-size: 14px; line-height: 1.6;">
             Nhập tên phòng và ấn <b>"Tạo Giải"</b> để khóa tính năng tự ghép cặp trong phòng đó. Khi tất cả thí sinh báo cáo đã nộp code thành công, nhấn <b>"Ghép cặp (Elo)"</b> để server tìm đối thủ dựa trên trình độ.
           </div>
@@ -1832,7 +1860,10 @@
         }
         if (myRole === 'admin') {
             const adminTour = $("sec-admin-tour");
-            if(adminTour) adminTour.hidden = false;
+            if(adminTour) {
+              adminTour.hidden = false;
+              loadRules();
+            }
           }
       }
 
@@ -2349,6 +2380,37 @@ $("lanGuideModal").addEventListener("click", (e) => {
           const j = await r.json();
           alert(j.message || j.error);
         } catch (e) { alert("Lỗi mạng!"); }
+      }
+
+      async function loadRules() {
+        try {
+          const r = await fetch("/api/rules");
+          const j = await r.json();
+          if (j.rules) {
+            $("ruleProtectBotError").checked = j.rules.protectBotError !== false;
+            $("ruleEnforceRPS").checked = j.rules.enforceRPS !== false;
+            $("ruleStepDelay").value = j.rules.stepDelay || 600;
+          }
+        } catch (e) {}
+      }
+
+      async function apiSaveRules() {
+        const protectBotError = $("ruleProtectBotError").checked;
+        const enforceRPS = $("ruleEnforceRPS").checked;
+        const stepDelay = parseInt($("ruleStepDelay").value) || 600;
+
+        try {
+          const r = await fetch("/api/rules", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ protectBotError, enforceRPS, stepDelay }),
+          });
+          const j = await r.json();
+          if (!r.ok) return alert("❌ " + (j.error || "Không thể lưu cấu hình!"));
+          alert(j.message || "✅ Đã lưu cấu hình luật thi đấu thành công!");
+        } catch (e) {
+          alert("Lỗi kết nối mạng!");
+        }
       }
     </script>
   </body>
